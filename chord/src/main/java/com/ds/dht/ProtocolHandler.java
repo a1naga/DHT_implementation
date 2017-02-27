@@ -40,7 +40,7 @@ public class ProtocolHandler implements Runnable {
 				System.out.println("Received: " + command + " " + content);
 
 				switch (command) {
-				case DHTMain.GET_VALUE: {
+				case DHTMain.FIND_VALUE: {
 					String response = getValue(content);
 					System.out.println("Sent: " + response);
 
@@ -169,8 +169,8 @@ public class ProtocolHandler implements Runnable {
 				BufferedReader socketReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 
 				// Send query to chord
-				socketWriter.println(DHTMain.GET_VALUE + ":" + query);
-				System.out.println("Sent: " + DHTMain.GET_VALUE + ":" + query);
+				socketWriter.println(DHTMain.FIND_VALUE + ":" + query);
+				System.out.println("Sent: " + DHTMain.FIND_VALUE + ":" + query);
 
 				// Read response from chord
 				String serverResponse = socketReader.readLine();

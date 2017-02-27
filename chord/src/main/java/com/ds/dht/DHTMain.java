@@ -3,7 +3,7 @@ package com.ds.dht;
 public class DHTMain {
 
 	public final static String NEW_PREDECESSOR = "NEW_PREDECESSOR";
-	public final static String GET_VALUE = "GET_VALUE";
+	public final static String FIND_VALUE = "FIND_VALUE";
 	public final static String FIND_NODE = "FIND_NODE";
 	public final static String NODE_FOUND = "NODE_FOUND";
 	public final static String REQUEST_PREDECESSOR = "REQUEST_PREDECESSOR";

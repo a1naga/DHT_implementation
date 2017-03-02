@@ -27,11 +27,11 @@ public class SHAHelper {
 
 			// Hash address
 			byte[] addressBytes = md.digest(this.address.getBytes());
-			//testing
+			/*//testing
 			for (byte s : addressBytes) {
 				System.out.println("addressBytes" + s);
 
-			}
+			}*/
 			
 			// Create 4-byte segments from 20-byte hash then XOR them together
 			// to get final 4-byte hash

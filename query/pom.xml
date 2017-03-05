@@ -40,7 +40,7 @@
                     </descriptorRefs>
                     <archive>
                         <manifest>
-                            <mainClass>com.milesoldenburg.jchord.query.Query</mainClass>
+                            <mainClass>com.ds.dht.query.Query</mainClass>
                         </manifest>
                     </archive>
                 </configuration>

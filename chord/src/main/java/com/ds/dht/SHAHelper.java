@@ -13,8 +13,8 @@ public class SHAHelper {
 	public SHAHelper() {
 	}
 
-	public SHAHelper(String address) {
-		this.address = address;
+	public SHAHelper(String addressplusport) {
+		this.address = addressplusport;
 		this.hash();
 	}
 

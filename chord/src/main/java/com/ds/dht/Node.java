@@ -12,7 +12,7 @@ import java.util.concurrent.Semaphore;
 
 public class Node {
 
-	private String address;
+	private String nodeIpAddress;
 	private int port;
 
 	private String bootStrapNodeAddress = null;
@@ -24,22 +24,22 @@ public class Node {
 	private Finger successor2;
 
 	private Map<Integer, Finger> fingerTable = new HashMap<>();
-
-	private long id;
+	
+	private long nodeId;
 	private String hex;
 	private Semaphore semaphore = new Semaphore(1);
 
 	/**
-	 * Constructor for creating a new Chord node that is the first in the ring.
+	 * Constructor for creating a new node that is the first in the ring.
 	 *
 	 * @param address
 	 *            The address of this node
 	 * @param port
-	 *            The port that this Chord node needs to listen on
+	 *            The port that this node needs to listen on
 	 */
 	public Node(String address, String port) {
 		// Set node fields
-		this.address = address;
+		this.nodeIpAddress = address;
 		this.port = Integer.valueOf(port);
 		System.out.println("Creating a new Chord ring");
 		initialize();
@@ -60,7 +60,7 @@ public class Node {
 	 */
 	public Node(String address, String port, String bootStrapNodeAddress, String bootStrapNodePort) {
 		// Set node fields
-		this.address = address;
+		this.nodeIpAddress = address;
 		this.port = Integer.valueOf(port);
 		System.out.println("Joining the Chord ring");
 
@@ -74,12 +74,14 @@ public class Node {
 
 	private void initialize() {
 		// Hash address
-		SHAHelper sha1Hasher = new SHAHelper(this.address + ":" + this.port);
-		this.id = sha1Hasher.getLong();
+		SHAHelper sha1Hasher = new SHAHelper(this.nodeIpAddress + ":" + this.port);
+		this.nodeId = sha1Hasher.getLong();
 		this.hex = sha1Hasher.getHex();
 
 		System.out.println("You are listening on port " + this.port);
-		System.out.println("Your position is " + hex + " (" + id + ")");
+		//System.out.println("Your position is " + hex + " (" + id + ")");
+		//Aarthi's testing
+		System.out.println("Your position is " + " (" + nodeId + ")");
 
 		// Initialize finger table and successors
 		initializeFingers();
@@ -100,11 +102,11 @@ public class Node {
 		// If this ring is the only node in the ring
 		if (bootStrapNodeAddress == null) {
 			// Initialize all fingers to refer to self
-			for (int i = 0; i < 32; i++) {
-				fingerTable.put(i, new Finger(address, port));
+			for (int i = 0; i < DHTMain.FINGER_TABLE_SIZE; i++) {
+				fingerTable.put(i, new Finger(nodeIpAddress, port));
 			}
 		} else {
-			// Open connection to contact node
+			// Open connection to the bootstrap node
 			try {
 				Socket socket = new Socket(bootStrapNodeAddress, bootStrapNodePort);
 
@@ -113,19 +115,22 @@ public class Node {
 				BufferedReader socketReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 
 				BigInteger bigQuery = BigInteger.valueOf(2L);
-				BigInteger bigSelfId = BigInteger.valueOf(id);
+				BigInteger bigSelfId = BigInteger.valueOf(nodeId);
 
-				for (int i = 0; i < 32; i++) {
+				for (int i = 0; i < DHTMain.FINGER_TABLE_SIZE; i++) {
+					// 2 power i calculation
 					BigInteger bigResult = bigQuery.pow(i);
+					//node id + 2 power i
 					bigResult = bigResult.add(bigSelfId);
 
-					// Send query to chord
+					// Send query to chord to find the node corresponding to each entry in the table for (node id + 2 power i)
 					socketWriter.println(DHTMain.FIND_NODE + ":" + bigResult.longValue());
-					System.out.println("Sent: " + DHTMain.FIND_NODE + ":" + bigResult.longValue());
+					//System.out.println("Find a node message Sent: " + DHTMain.FIND_NODE + ":" + bigResult.longValue());
 
 					// Read response from chord
 					String serverResponse = socketReader.readLine();
-
+					//ServerResponse format:
+					//response = DHTMain.NODE_FOUND + ":" + node.getAddress() + ":" + node.getPort();
 					// Parse out address and port
 					String[] serverResponseFragments = serverResponse.split(":", 2);
 					String[] addressFragments = serverResponseFragments[1].split(":");
@@ -133,7 +138,7 @@ public class Node {
 					// Add response finger to table
 					fingerTable.put(i, new Finger(addressFragments[0], Integer.valueOf(addressFragments[1])));
 
-					System.out.println("Received: " + serverResponse);
+					//System.out.println("Received: " + serverResponse);
 				}
 
 				// Close connections
@@ -145,6 +150,7 @@ public class Node {
 				e.printStackTrace();
 			}
 		}
+		printFingerTableEntries();
 	}
 
 	/**
@@ -154,12 +160,13 @@ public class Node {
 	private void initializeSuccessors() {
 		successor1 = fingerTable.get(0);
 		successor2 = fingerTable.get(1);
-		predecessor1 = new Finger(address, port);
-		predecessor2 = new Finger(address, port);
+		predecessor1 = new Finger(nodeIpAddress, port);
+		predecessor2 = new Finger(nodeIpAddress, port);
 
 		// Notify the first successor that we are the new predecessor, provided
 		// we do not open a connection to ourselves
-		if (!address.equals(successor1.getAddress()) || (port != successor1.getPort())) {
+		// If I am not my successor then connect with the succesor
+		if (!nodeIpAddress.equals(successor1.getAddress()) || (port != successor1.getPort())) {
 			try {
 				Socket socket = new Socket(successor1.getAddress(), successor1.getPort());
 
@@ -167,9 +174,9 @@ public class Node {
 				PrintWriter socketWriter = new PrintWriter(socket.getOutputStream(), true);
 
 				// Tell successor that this node is its new predecessor
-				socketWriter.println(DHTMain.NEW_PREDECESSOR + ":" + getAddress() + ":" + getPort());
-				System.out.println("Sent: " + DHTMain.NEW_PREDECESSOR + ":" + getAddress() + ":" + getPort()
-						+ " to " + successor1.getAddress() + ":" + successor1.getPort());
+				socketWriter.println(DHTMain.NEW_PREDECESSOR + ":" + getNodeIpAddress() + ":" + getPort());
+				//System.out.println("Sent: " + DHTMain.NEW_PREDECESSOR + ":" + getNodeIpAddress() + ":" + getPort()
+				//		+ " to " + successor1.getAddress() + ":" + successor1.getPort());
 
 				// Close connections
 				socketWriter.close();
@@ -188,7 +195,7 @@ public class Node {
 	 *            The message to print to the console
 	 */
 	private void logError(String errorMessage) {
-		System.err.println("Error (" + id + "): " + errorMessage);
+		System.err.println("Error (" + nodeId + "): " + errorMessage);
 	}
 
 	public void lock() {
@@ -211,8 +218,8 @@ public class Node {
 		return port;
 	}
 
-	public String getAddress() {
-		return address;
+	public String getNodeIpAddress() {
+		return nodeIpAddress;
 	}
 
 	public Finger getSuccessor1() {
@@ -247,12 +254,21 @@ public class Node {
 		predecessor2 = secondPredecessor;
 	}
 
-	public long getId() {
-		return id;
+	public long getNodeId() {
+		return nodeId;
 	}
 
 	public Semaphore getSemaphore() {
 		return semaphore;
+	}
+	
+	public void printFingerTableEntries() {
+		System.out.println("-------------------- Finger Table Entries -------------------");
+		for (int i = 0 ; i < DHTMain.FINGER_TABLE_SIZE ; i++) {
+			Finger finger = fingerTable.get(i);
+			System.out.println("Finger Entry " + i + " ip " + finger.getAddress() + " port " + finger.getPort());
+		}
+		System.out.println("-------------------- Finger Table Entries -------------------");
 	}
 
 }

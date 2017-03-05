@@ -39,7 +39,7 @@ public class QueryNode {
             BufferedReader consoleReader = new BufferedReader(new InputStreamReader(System.in));
 
             // Prompt for entry on console
-            System.out.println("Please enter your search key (or type \"quit\" to leave):");
+            System.out.println("Please enter your command (or type \"quit\" to leave):");
 
             // Read from console until quit command
             String query = consoleReader.readLine();

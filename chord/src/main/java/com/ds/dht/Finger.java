@@ -7,7 +7,7 @@ public class Finger {
 
     private String address;
     private int port;
-    private long id;
+    private long nodeId;
 
     public Finger(String address, int port) {
         this.address = address;
@@ -15,19 +15,19 @@ public class Finger {
 
         // Hash address:port
         SHAHelper sha1Hasher = new SHAHelper(this.address + ":" + this.port);
-        this.id = sha1Hasher.getLong();
+        this.nodeId = sha1Hasher.getLong();
     }
 
     public String getAddress() {
-        return this.address;
+        return address;
     }
 
     public int getPort() {
-        return this.port;
+        return port;
     }
 
-    public long getId() {
-        return this.id;
+    public long getNodeId() {
+        return nodeId;
     }
 
 }

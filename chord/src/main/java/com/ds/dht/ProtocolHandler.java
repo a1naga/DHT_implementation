@@ -8,11 +8,11 @@ import java.net.Socket;
 
 public class ProtocolHandler implements Runnable {
 
-	private Node node;
+	private Node currentNode;
 	private Socket socket = null;
 
 	public ProtocolHandler(Node node, Socket socket) {
-		this.node = node;
+		this.currentNode = node;
 		this.socket = socket;
 	}
 
@@ -21,7 +21,6 @@ public class ProtocolHandler implements Runnable {
 	 * PING/STORE/FIND_NODE/GET_VALUE messages
 	 */
 	public void run() {
-		System.out.println("Client connection established on port " + socket.getLocalPort());
 
 		try {
 			// Create readers and writers from socket
@@ -37,12 +36,12 @@ public class ProtocolHandler implements Runnable {
 				String command = queryContents[0];
 				String content = queryContents[1];
 
-				System.out.println("Received: " + command + " " + content);
+				//System.out.println("Received: " + command + " " + content);
 
 				switch (command) {
 				case DHTMain.FIND_VALUE: {
 					String response = getValue(content);
-					System.out.println("Sent: " + response);
+					//System.out.println("Sent: " + response);
 
 					// Send response back to client
 					socketWriter.println(response);
@@ -51,7 +50,7 @@ public class ProtocolHandler implements Runnable {
 				}
 				case DHTMain.FIND_NODE: {
 					String response = findNode(content);
-					System.out.println("Sent: " + response);
+					//System.out.println("Sent: " + response);
 
 					// Send response back to client
 					socketWriter.println(response);
@@ -63,25 +62,25 @@ public class ProtocolHandler implements Runnable {
 					String[] contentFragments = content.split(":");
 					String address = contentFragments[0];
 					int port = Integer.valueOf(contentFragments[1]);
-
+					System.out.println("GOT NEW PREDECESSOR address : " + address + ", port : " + port);
 					// Acquire lock
-					node.lock();
+					currentNode.lock();
 
-					// Move fist predecessor to second
-					node.setPredecessor2(node.getPredecessor1());
+					// Move first predecessor to second
+					currentNode.setPredecessor2(currentNode.getPredecessor1());
 
 					// Set first predecessor to new finger received in message
-					node.setPredecessor1(new Finger(address, port));
+					currentNode.setPredecessor1(new Finger(address, port));
 
 					// Release lock
-					node.unlock();
+					currentNode.unlock();
 
 					break;
 				}
 				case DHTMain.REQUEST_PREDECESSOR: {
 					// Return the first predecessor address:port
-					String response = node.getPredecessor1().getAddress() + ":" + node.getPredecessor1().getPort();
-					System.out.println("Sent: " + response);
+					String response = currentNode.getPredecessor1().getAddress() + ":" + currentNode.getPredecessor1().getPort();
+					//System.out.println("Sent: " + response);
 
 					// Send response back to client
 					socketWriter.println(response);
@@ -91,13 +90,22 @@ public class ProtocolHandler implements Runnable {
 				case DHTMain.PING_QUERY: {
 					// Reply to the ping
 					String response = DHTMain.PING_RESPONSE;
-					System.out.println("Sent: " + response);
+					//System.out.println("Sent: " + response);
 
 					// Send response back to client
 					socketWriter.println(response);
 
 					break;
 				}
+				/*case DHTMain.PUT_VALUE:{
+					String response = putValue(content);
+					//System.out.println("Sent: " + response);
+
+					// Send response back to client
+					socketWriter.println(response);
+
+					break;
+				}*/
 				}
 			}
 
@@ -109,44 +117,44 @@ public class ProtocolHandler implements Runnable {
 			e.printStackTrace();
 		}
 
-		System.out.println("Client connection terminated on port " + socket.getLocalPort());
+		//System.out.println("Client connection terminated on port " + socket.getLocalPort());
 	}
 
 	private String getValue(String query) {
 		// Get long of query
 		SHAHelper queryHasher = new SHAHelper(query);
-		long queryId = queryHasher.getLong();
+		long queryNodeId = queryHasher.getLong();
 
-		// Wrap the queryid if it is as big as the ring
-		if (queryId >= DHTMain.RING_SIZE) {
-			queryId -= DHTMain.RING_SIZE;
+		// Wrap the queryNodeId if it is as big as the ring
+		if (queryNodeId >= DHTMain.RING_SIZE) {
+			queryNodeId -= DHTMain.RING_SIZE;
 		}
 
 		String response = "Not found.";
 
 		// If the query is greater than our predecessor id and less than equal
 		// to our id then we have the value
-		if (isThisMyNode(queryId)) {
-			response = "VALUE_FOUND:Request acknowledged on node " + node.getAddress() + ":" + node.getPort();
-		} else if (isThisNextNode(queryId)) {
-			response = "VALUE_FOUND:Request acknowledged on node " + node.getSuccessor1().getAddress() + ":"
-					+ node.getSuccessor1().getPort();
-		} else { // We don't have the query so we must search our fingers for it
+		if (isThisMyNode(queryNodeId)) {
+			response = "VALUE_FOUND:Request acknowledged on node " + currentNode.getNodeIpAddress() + ":" + currentNode.getPort();
+		} else if (isThisNextNode(queryNodeId)) {
+			response = "VALUE_FOUND:Request acknowledged on node " + currentNode.getSuccessor1().getAddress() + ":"
+					+ currentNode.getSuccessor1().getPort();
+		} else { // We don't have the queryNodeId so we must search our fingers for it
 			long minimumDistance = DHTMain.RING_SIZE;
 			Finger closestPredecessor = null;
 
-			node.lock();
+			currentNode.lock();
 
 			// Look for a node identifier in the finger table that is less than
-			// the key id and closest in the ID space to the key id
-			for (Finger finger : node.getFingerTable().values()) {
+			// the queryNodeId and closest in the ID space to the queryNodeId
+			for (Finger finger : currentNode.getFingerTable().values()) {
 				long distance;
 
-				// Find clockwise distance from finger to query
-				if (queryId >= finger.getId()) {
-					distance = queryId - finger.getId();
+				// Find clockwise distance from finger to queryNodeId
+				if (queryNodeId >= finger.getNodeId()) {
+					distance = queryNodeId - finger.getNodeId();
 				} else {
-					distance = queryId + DHTMain.RING_SIZE - finger.getId();
+					distance = queryNodeId + DHTMain.RING_SIZE - finger.getNodeId();
 				}
 
 				// If the distance we have found is smaller than the current
@@ -157,7 +165,7 @@ public class ProtocolHandler implements Runnable {
 				}
 			}
 
-			System.out.println("queryid: " + queryId + " minimum distance: " + minimumDistance + " on "
+			System.out.println("queryNodeId: " + queryNodeId + " minimum distance: " + minimumDistance + " on "
 					+ closestPredecessor.getAddress() + ":" + closestPredecessor.getPort());
 
 			try {
@@ -175,7 +183,7 @@ public class ProtocolHandler implements Runnable {
 				// Read response from chord
 				String serverResponse = socketReader.readLine();
 				System.out.println("Response from node " + closestPredecessor.getAddress() + ", port "
-						+ closestPredecessor.getPort() + ", position " + " (" + closestPredecessor.getId() + "):");
+						+ closestPredecessor.getPort() + ", position " + " (" + closestPredecessor.getNodeId() + "):");
 
 				response = serverResponse;
 
@@ -187,45 +195,45 @@ public class ProtocolHandler implements Runnable {
 				e.printStackTrace();
 			}
 
-			node.unlock();
+			currentNode.unlock();
 		}
 
 		return response;
 	}
 
 	private String findNode(String query) {
-		long queryId = Long.valueOf(query);
+		long queryNodeId = Long.valueOf(query);
 
 		// Wrap the queryid if it is as big as the ring
-		if (queryId >= DHTMain.RING_SIZE) {
-			queryId -= DHTMain.RING_SIZE;
+		if (queryNodeId >= DHTMain.RING_SIZE) {
+			queryNodeId -= DHTMain.RING_SIZE;
 		}
 
 		String response = "Not found.";
 
-		// If the query is greater than our predecessor id and less than equal
+		// If the queryNodeId is greater than our predecessor id and less than equal
 		// to our id then we have the value
-		if (isThisMyNode(queryId)) {
-			response = DHTMain.NODE_FOUND + ":" + node.getAddress() + ":" + node.getPort();
-		} else if (isThisNextNode(queryId)) {
-			response = DHTMain.NODE_FOUND + ":" + node.getSuccessor1().getAddress() + ":"
-					+ node.getSuccessor1().getPort();
+		if (isThisMyNode(queryNodeId)) {
+			response = DHTMain.NODE_FOUND + ":" + currentNode.getNodeIpAddress() + ":" + currentNode.getPort();
+		} else if (isThisNextNode(queryNodeId)) {
+			response = DHTMain.NODE_FOUND + ":" + currentNode.getSuccessor1().getAddress() + ":"
+					+ currentNode.getSuccessor1().getPort();
 		} else { // We don't have the query so we must search our fingers for it
 			long minimumDistance = DHTMain.RING_SIZE;
 			Finger closestPredecessor = null;
 
-			node.lock();
+			currentNode.lock();
 
 			// Look for a node identifier in the finger table that is less than
 			// the key id and closest in the ID space to the key id
-			for (Finger finger : node.getFingerTable().values()) {
+			for (Finger finger : currentNode.getFingerTable().values()) {
 				long distance;
 
 				// Find clockwise distance from finger to query
-				if (queryId >= finger.getId()) {
-					distance = queryId - finger.getId();
+				if (queryNodeId >= finger.getNodeId()) {
+					distance = queryNodeId - finger.getNodeId();
 				} else {
-					distance = queryId + DHTMain.RING_SIZE - finger.getId();
+					distance = queryNodeId + DHTMain.RING_SIZE - finger.getNodeId();
 				}
 
 				// If the distance we have found is smaller than the current
@@ -236,7 +244,7 @@ public class ProtocolHandler implements Runnable {
 				}
 			}
 
-			System.out.println("queryid: " + queryId + " minimum distance: " + minimumDistance + " on "
+			System.out.println("queryid: " + queryNodeId + " minimum distance: " + minimumDistance + " on "
 					+ closestPredecessor.getAddress() + ":" + closestPredecessor.getPort());
 
 			try {
@@ -248,13 +256,13 @@ public class ProtocolHandler implements Runnable {
 				BufferedReader socketReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 
 				// Send query to chord
-				socketWriter.println(DHTMain.FIND_NODE + ":" + queryId);
-				System.out.println("Sent: " + DHTMain.FIND_NODE + ":" + queryId);
+				socketWriter.println(DHTMain.FIND_NODE + ":" + queryNodeId);
+				System.out.println("Sent: " + DHTMain.FIND_NODE + ":" + queryNodeId);
 
 				// Read response from chord
 				String serverResponse = socketReader.readLine();
 				System.out.println("Response from node " + closestPredecessor.getAddress() + ", port "
-						+ closestPredecessor.getPort() + ", position " + " (" + closestPredecessor.getId() + "):");
+						+ closestPredecessor.getPort() + ", position " + " (" + closestPredecessor.getNodeId() + "):");
 
 				response = serverResponse;
 
@@ -266,24 +274,24 @@ public class ProtocolHandler implements Runnable {
 				e.printStackTrace();
 			}
 
-			node.unlock();
+			currentNode.unlock();
 		}
 
 		return response;
 	}
 
-	private boolean isThisMyNode(long queryId) {
+	private boolean isThisMyNode(long queryNodeId) {
 		boolean response = false;
 
 		// If we are working in a nice clockwise direction without wrapping
-		if (node.getId() > node.getPredecessor1().getId()) {
-			// If the query id is between our predecessor and us, the query
-			// belongs to us
-			if ((queryId > node.getPredecessor1().getId()) && (queryId <= node.getId())) {
+		if (currentNode.getNodeId() > currentNode.getPredecessor1().getNodeId()) {
+			// If the queryNodeId is between my predecessor and me, the query
+			// belongs to me
+			if ((queryNodeId > currentNode.getPredecessor1().getNodeId()) && (queryNodeId <= currentNode.getNodeId())) {
 				response = true;
 			}
 		} else { // If we are wrapping
-			if ((queryId > node.getPredecessor1().getId()) || (queryId <= node.getId())) {
+			if ((queryNodeId > currentNode.getPredecessor1().getNodeId()) || (queryNodeId <= currentNode.getNodeId())) {
 				response = true;
 			}
 		}
@@ -291,18 +299,18 @@ public class ProtocolHandler implements Runnable {
 		return response;
 	}
 
-	private boolean isThisNextNode(long queryId) {
+	private boolean isThisNextNode(long queryNodeId) {
 		boolean response = false;
 
 		// If we are working in a nice clockwise direction without wrapping
-		if (node.getId() < node.getSuccessor1().getId()) {
+		if (currentNode.getNodeId() < currentNode.getSuccessor1().getNodeId()) {
 			// If the query id is between our successor and us, the query
 			// belongs to our successor
-			if ((queryId > node.getId()) && (queryId <= node.getSuccessor1().getId())) {
+			if ((queryNodeId > currentNode.getNodeId()) && (queryNodeId <= currentNode.getSuccessor1().getNodeId())) {
 				response = true;
 			}
 		} else { // If we are wrapping
-			if ((queryId > node.getId()) || (queryId <= node.getSuccessor1().getId())) {
+			if ((queryNodeId > currentNode.getNodeId()) || (queryNodeId <= currentNode.getSuccessor1().getNodeId())) {
 				response = true;
 			}
 		}

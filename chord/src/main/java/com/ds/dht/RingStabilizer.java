@@ -98,6 +98,24 @@ public class RingStabilizer extends Thread {
 								+ currentNode.getPort());
 						//System.out.println("Sent: " + DHTMain.NEW_PREDECESSOR + ":" + currentNode.getNodeIpAddress()
 						//		+ ":" + currentNode.getPort());
+						
+						//Redistribute key value pair from new successor to itself
+                        socketWriter.println(DHTMain.REQUEST_KEY_VALUES + ":" + currentNode.getNodeId());
+        				serverResponse = socketReader.readLine();
+        				if (serverResponse != null && !serverResponse.isEmpty()
+        						&& serverResponse != "") {
+        					String[] keyValuePairs = serverResponse.split("::");
+        					currentNode.lock();
+
+        					for (int i = 0; i < keyValuePairs.length; i++) {
+        						String[] keyValue = keyValuePairs[i].split(":", 2);
+        						if (keyValue.length == 2) {
+        							String key = keyValue[0];
+        							String value = keyValue[1];
+        							currentNode.getDataStore().put(key, value);
+        							System.out.println("(key,value) => (" + key+ ","+value+")" + "sent to :" + currentNode.getNodeIpAddress() + ":" + currentNode.getPort());
+        						}
+        					}
 					}
 					fingerTableUpdate(socketWriter,socketReader);
 					// Close connections
@@ -107,6 +125,7 @@ public class RingStabilizer extends Thread {
 					
 					
 				} 
+				}
 				// else If I dont have successor entries and if I am not my 1st predecessor then connect to my predecessor and update my finger table
 				else if (!currentNode.getNodeIpAddress().equals(currentNode.getPredecessor1().getAddress())
 						|| (currentNode.getPort() != currentNode.getPredecessor1().getPort())) {
@@ -125,10 +144,11 @@ public class RingStabilizer extends Thread {
 					socket.close();
 					
 				}
-
+				
 				// Stabilize again after delay
 				Thread.sleep(delaySeconds);
 			}
+			
 		} catch (InterruptedException e) {
 			System.err.println("stabilize() thread interrupted");
 			e.printStackTrace();

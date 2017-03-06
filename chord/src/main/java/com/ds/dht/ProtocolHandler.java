@@ -5,6 +5,8 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.util.Iterator;
+import java.util.Map;
 
 public class ProtocolHandler implements Runnable {
 
@@ -108,7 +110,13 @@ public class ProtocolHandler implements Runnable {
 
 					break;
 				}
+				
+				case DHTMain.REQUEST_KEY_VALUES: {
+					String response = requestKeyValues(content);
+					System.out.println("Sent from requestKeyValues: "
+							+ response);
 
+				}
 				}
 			}
 
@@ -211,12 +219,11 @@ public class ProtocolHandler implements Runnable {
 
 		return response;
 	}
-	
-	private String putValue(String keyValue){
-		
-		String [] keyValueArray = keyValue.split(":");
-		
-		
+
+	private String putValue(String keyValue) {
+
+		String[] keyValueArray = keyValue.split(":");
+
 		// Get long of query
 		SHAHelper keyHasher = new SHAHelper(keyValueArray[0]);
 		long keyResidingNodeId = keyHasher.getLong();
@@ -231,11 +238,10 @@ public class ProtocolHandler implements Runnable {
 		// If the query is greater than our predecessor id and less than equal
 		// to our id then we have the value
 		if (isThisMyNode(keyResidingNodeId)) {
-			
+
 			currentNode.getDataStore().put(keyValueArray[0], keyValueArray[1]);
-			
-			response = "VALUE_STORED: on node " + currentNode.getNodeId() + ":"
-					+ currentNode.getPort();
+
+			response = "VALUE_STORED: on node " + currentNode.getNodeId() + ":" + currentNode.getPort();
 		}
 		/*
 		 * else if (isThisNextNode(keyResidingNodeId)) { response =
@@ -244,9 +250,9 @@ public class ProtocolHandler implements Runnable {
 		 * currentNode.getSuccessor1().getPort() + ":" +
 		 * currentNode.getDataStore().get(key); }
 		 */
-		
+
 		// TODO remove isThisNextNode method below which is not needed
-		
+
 		else {
 			// We don't have the keyResidingNodeId so we must search our fingers
 			// for it
@@ -256,7 +262,8 @@ public class ProtocolHandler implements Runnable {
 			currentNode.lock();
 
 			// Look for a node identifier in the finger table that is less than
-			// the keyResidingNodeId and closest in the ID space to the keyResidingNodeId
+			// the keyResidingNodeId and closest in the ID space to the
+			// keyResidingNodeId
 			for (Finger finger : currentNode.getFingerTable().values()) {
 				long distance;
 
@@ -308,7 +315,7 @@ public class ProtocolHandler implements Runnable {
 		}
 
 		return response;
-	
+
 	}
 
 	private String findNode(String query) {
@@ -331,7 +338,7 @@ public class ProtocolHandler implements Runnable {
 					+ currentNode.getSuccessor1().getPort();
 		} else { // We don't have the query so we must search our fingers for it
 			long minimumDistance = DHTMain.RING_SIZE;
-			Finger closestPredecessor = null;
+			Finger closestNodeToKey = null;
 
 			currentNode.lock();
 
@@ -351,16 +358,16 @@ public class ProtocolHandler implements Runnable {
 				// minimum, replace the current minimum
 				if (distance < minimumDistance) {
 					minimumDistance = distance;
-					closestPredecessor = finger;
+					closestNodeToKey = finger;
 				}
 			}
 
 			System.out.println("queryid: " + queryNodeId + " minimum distance: " + minimumDistance + " on "
-					+ closestPredecessor.getAddress() + ":" + closestPredecessor.getPort());
+					+ closestNodeToKey.getAddress() + ":" + closestNodeToKey.getPort());
 
 			try {
 				// Open socket to chord node
-				Socket socket = new Socket(closestPredecessor.getAddress(), closestPredecessor.getPort());
+				Socket socket = new Socket(closestNodeToKey.getAddress(), closestNodeToKey.getPort());
 
 				// Open reader/writer to chord node
 				PrintWriter socketWriter = new PrintWriter(socket.getOutputStream(), true);
@@ -372,8 +379,8 @@ public class ProtocolHandler implements Runnable {
 
 				// Read response from chord
 				String serverResponse = socketReader.readLine();
-				System.out.println("Response from node " + closestPredecessor.getAddress() + ", port "
-						+ closestPredecessor.getPort() + ", position " + " (" + closestPredecessor.getNodeId() + "):");
+				System.out.println("Response from node " + closestNodeToKey.getAddress() + ", port "
+						+ closestNodeToKey.getPort() + ", position " + " (" + closestNodeToKey.getNodeId() + "):");
 
 				response = serverResponse;
 
@@ -426,6 +433,40 @@ public class ProtocolHandler implements Runnable {
 			}
 		}
 
+		return response;
+	}
+
+	private String requestKeyValues(String strNodeId) {
+		StringBuffer sbResponse = new StringBuffer();
+		long nodeId = Long.valueOf(strNodeId);
+		SHAHelper queryHasher;
+		try {
+			for (Iterator<Map.Entry<String, String>> it = currentNode.getDataStore().entrySet().iterator(); it
+					.hasNext();) {
+				Map.Entry<String, String> entry = it.next();
+				String strKey = entry.getKey();
+				queryHasher = new SHAHelper(strKey);
+				long keyId = queryHasher.getLong();
+				// Wrap the keyid if it is as big as the ring
+				if (keyId >= DHTMain.RING_SIZE) {
+					keyId -= DHTMain.RING_SIZE;
+				}
+				if (keyId < nodeId) {
+					sbResponse.append(strKey + ":" + entry.getValue());
+					sbResponse.append("::");
+
+					// Remove the key value pair from the current node
+					currentNode.lock();
+					it.remove();
+					currentNode.unlock();
+				}
+			}
+		} catch (Exception ex) {
+			ex.printStackTrace();
+		}
+		String response = sbResponse.toString();
+		if (response != null && !response.isEmpty() && response != "")
+			response = response.substring(0, response.length() - 2);
 		return response;
 	}
 

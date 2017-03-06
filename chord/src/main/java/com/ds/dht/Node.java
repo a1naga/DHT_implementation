@@ -44,6 +44,7 @@ public class Node {
 		this.port = Integer.valueOf(port);
 		System.out.println("Creating a new Chord ring");
 		initialize();
+		printKeyValueMap();
 	}
 
 	/**
@@ -70,6 +71,7 @@ public class Node {
 		this.bootStrapNodePort = Integer.valueOf(bootStrapNodePort);
 		System.out.println("Connecting to existing node " + this.bootStrapNodeAddress + ":" + this.bootStrapNodePort);
 		initialize();
+		printKeyValueMap();
 
 	}
 
@@ -188,6 +190,64 @@ public class Node {
 			}
 		}
 	}
+	
+	private void printKeyValueMap() {
+		for (String s : this.dataStore.keySet()) {
+			System.out.println("(key,value) => (" + s + ","
+					+ this.dataStore.get(s) + ")");
+		}
+	}
+	
+	/**
+	 * Distributes keyValue pairs from the predecessors and successors to the
+	 * newly added node in the ring.
+	 */
+	private void distributeKeyValues() {
+		try {
+			if (this.successor1 != null) {
+				Socket socket = new Socket(this.successor1.getAddress(),
+						this.successor1.getPort());
+
+				// Open reader/writer to successor node
+				PrintWriter socketWriter = new PrintWriter(
+						socket.getOutputStream(), true);
+				BufferedReader socketReader = new BufferedReader(
+						new InputStreamReader(socket.getInputStream()));
+
+				// Ask successor to distribute key value to this node
+				socketWriter
+						.println(DHTMain.REQUEST_KEY_VALUES + ":" + this.nodeId);
+
+				String serverResponse = socketReader.readLine();
+				if (serverResponse != null && !serverResponse.isEmpty()
+						&& serverResponse != "") {
+					String[] keyValuePairs = serverResponse.split("::");
+					this.lock();
+
+					for (int i = 0; i < keyValuePairs.length; i++) {
+						String[] keyValue = keyValuePairs[i].split(":", 2);
+						if (keyValue.length == 2) {
+							String key = keyValue[0];
+							String value = keyValue[1];
+							this.getDataStore().put(key, value);
+						}
+					}
+					this.unlock();
+				}
+
+				// Close connections
+				socketWriter.close();
+				socketReader.close();
+				socket.close();
+			}
+		} catch (Exception ex) {
+			logError("Could not open connection to first successor");
+			System.out.println("Error from distributeKeyValues(): "
+					+ ex.getLocalizedMessage());
+			ex.printStackTrace();
+
+		}
+	}
 
 	/**
 	 * Logs error messages to the console
@@ -213,7 +273,7 @@ public class Node {
 
 	public Map<Integer, Finger> getFingerTable() {
 		return fingerTable;
-	}
+	}	
 
 	public int getPort() {
 		return port;

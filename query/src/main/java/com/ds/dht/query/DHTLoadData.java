@@ -45,8 +45,9 @@ public class DHTLoadData {
 				String sCurrentLine;
 				System.out.println("starting to load data from data.txt");
 				while ((sCurrentLine = br.readLine()) != null) {
-					socketWriter.println("PUT_KEYVALUE:" + sCurrentLine);
+					socketWriter.println("PUT_VALUE:" + sCurrentLine);
 					String response = socketReader.readLine();
+					System.out.println(response);
 					// TODO check the Response
 				}
 				System.out.println("loaded data to DHT");

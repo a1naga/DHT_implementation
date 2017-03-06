@@ -24,6 +24,7 @@ public class Node {
 	private Finger successor2;
 
 	private Map<Integer, Finger> fingerTable = new HashMap<>();
+	private Map<String, String> dataStore = new HashMap<>();
 	
 	private long nodeId;
 	private String hex;
@@ -262,13 +263,29 @@ public class Node {
 		return semaphore;
 	}
 	
+	public Map<String, String> getDataStore() {
+		return dataStore;
+	}
+
+	public void setDataStore(Map<String, String> dataStore) {
+		this.dataStore = dataStore;
+	}
+	
 	public void printFingerTableEntries() {
 		System.out.println("-------------------- Finger Table Entries -------------------");
+
+		System.out.println("Finger Entry  " + " ip                " + " port    "  + " NodeID");
+		System.out.println("---------------------------------------------- -------------------");
+
 		for (int i = 0 ; i < DHTMain.FINGER_TABLE_SIZE ; i++) {
 			Finger finger = fingerTable.get(i);
-			System.out.println("Finger Entry " + i + " ip " + finger.getAddress() + " port " + finger.getPort());
+			//System.out.println("Finger Entry " + i + " ip " + finger.getAddress() + " port " + finger.getPort() + " NodeID " + finger.getNodeId());
+			System.out.println( "  "+ i +"            " + finger.getAddress()  + "          " + finger.getPort() + "     " + finger.getNodeId());
+
 		}
 		System.out.println("-------------------- Finger Table Entries -------------------");
 	}
+
+	
 
 }

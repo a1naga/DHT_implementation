@@ -42,11 +42,11 @@ public class QueryNode {
             System.out.println("Please enter your search key (or type \"quit\" to leave):");
 
             // Read from console until quit command
-            String query = consoleReader.readLine();
-            while (!query.equals("quit")) {
+            String key = consoleReader.readLine();
+            while (!key.equals("quit")) {
                 // Send query to chord
-                socketWriter.println("FIND_VALUE:" + query);
-                System.out.println("Sent: " + "FIND_VALUE:" + query);
+                socketWriter.println("FIND_VALUE:" + key);
+                System.out.println("Sent: " + "FIND_VALUE:" + key);
 
                 // Read response from chord
                 String serverResponse = socketReader.readLine();
@@ -55,7 +55,7 @@ public class QueryNode {
 
                 // Prompt for new input
                 System.out.println("Please enter your search key (or type \"quit\" to leave):");
-                query = consoleReader.readLine();
+                key = consoleReader.readLine();
             }
 
             // We have now read quit from the console so the program should exit

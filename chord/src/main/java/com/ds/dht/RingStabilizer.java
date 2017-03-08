@@ -9,8 +9,8 @@ import java.net.Socket;
 import java.net.UnknownHostException;
 
 /**
- * The role of RingStabilizer is to keep the finger table up-to-date and to make sure that the predecessor and successor 
- * are correct.
+ * The role of RingStabilizer is to keep the finger table up-to-date and to make
+ * sure that the predecessor and successor are correct.
  *
  */
 public class RingStabilizer extends Thread {
@@ -23,8 +23,9 @@ public class RingStabilizer extends Thread {
 	}
 
 	/**
-	 * Method that periodically runs to determine if node's successor is uptodate
-	 * by contacting the listed successor and asking for its predecessor. 
+	 * Method that periodically runs to determine if node's successor is
+	 * uptodate by contacting the listed successor and asking for its
+	 * predecessor.
 	 */
 	public void run() {
 		try {
@@ -51,21 +52,26 @@ public class RingStabilizer extends Thread {
 					// Submit a request for the predecessor
 					socketWriter.println(DHTMain.REQUEST_PREDECESSOR + ":" + currentNode.getNodeId() + " asking "
 							+ currentNode.getSuccessor1().getNodeId());
-					//System.out.println("Sent: " + DHTMain.REQUEST_PREDECESSOR + ":" + currentNode.getNodeId()
-					//		+ " asking " + currentNode.getSuccessor1().getNodeId());
+							// System.out.println("Sent: " +
+							// DHTMain.REQUEST_PREDECESSOR + ":" +
+							// currentNode.getNodeId()
+							// + " asking " +
+							// currentNode.getSuccessor1().getNodeId());
 
 					// Read response from chord
 					String serverResponse = socketReader.readLine();
-					//System.out.println("Received: " + serverResponse);
+					// System.out.println("Received: " + serverResponse);
 
 					// Parse server response for address and port
 					String[] predecessorFragments = serverResponse.split(":");
 					String predecessorAddress = predecessorFragments[0];
 					int predecessorPort = Integer.valueOf(predecessorFragments[1]);
 
-					// If the address:port that was returned from the server response is
+					// If the address:port that was returned from the server
+					// response is
 					// not ourselves then we need to adopt it as our new
-					// successor ( Checking if I am still the predecessor for my Successor, if not update my finger table)
+					// successor ( Checking if I am still the predecessor for my
+					// Successor, if not update my finger table)
 					if (!currentNode.getNodeIpAddress().equals(predecessorAddress)
 							|| (currentNode.getPort() != predecessorPort)) {
 						currentNode.lock();
@@ -93,62 +99,64 @@ public class RingStabilizer extends Thread {
 						socketWriter = new PrintWriter(socket.getOutputStream(), true);
 						socketReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 
-						// Tell successor that I am your new predecessor
+						// Tell successor that this node is its new predecessor
 						socketWriter.println(DHTMain.NEW_PREDECESSOR + ":" + currentNode.getNodeIpAddress() + ":"
 								+ currentNode.getPort());
-						//System.out.println("Sent: " + DHTMain.NEW_PREDECESSOR + ":" + currentNode.getNodeIpAddress()
-						//		+ ":" + currentNode.getPort());
-						
-						//Redistribute key value pair from new successor to itself
-                        socketWriter.println(DHTMain.REQUEST_KEY_VALUES + ":" + currentNode.getNodeId());
-        				serverResponse = socketReader.readLine();
-        				if (serverResponse != null && !serverResponse.isEmpty()
-        						&& serverResponse != "") {
-        					String[] keyValuePairs = serverResponse.split("::");
-        					currentNode.lock();
+						System.out.println("Sent: " + DHTMain.NEW_PREDECESSOR + ":" + currentNode.getNodeIpAddress()
+								+ ":" + currentNode.getPort());
 
-        					for (int i = 0; i < keyValuePairs.length; i++) {
-        						String[] keyValue = keyValuePairs[i].split(":", 2);
-        						if (keyValue.length == 2) {
-        							String key = keyValue[0];
-        							String value = keyValue[1];
-        							currentNode.getDataStore().put(key, value);
-        							System.out.println("(key,value) => (" + key+ ","+value+")" + "sent to :" + currentNode.getNodeIpAddress() + ":" + currentNode.getPort());
-        						}
-        					}
+						// Redistribute key value pair from new successor to
+						// itself
+						socketWriter.println(DHTMain.REQUEST_KEY_VALUES + ":" + currentNode.getNodeId());
+						serverResponse = socketReader.readLine();
+						if (serverResponse != null && !serverResponse.isEmpty() && serverResponse != "") {
+							String[] keyValuePairs = serverResponse.split("::");
+							currentNode.lock();
+
+							for (int i = 0; i < keyValuePairs.length; i++) {
+								// String[] keyValue =
+								// keyValuePairs[i].split(":", 2);
+								String[] keyValue = keyValuePairs[i].split(":", 3);
+								if (keyValue.length == 3) {
+									String key = keyValue[0];
+									String value = keyValue[1];
+									String keyHashValue = keyValue[2];
+									currentNode.getDataStore().put(key, value);
+									System.out.println("(key,value) => (" + key + "," + value 
+											+ "with a Key Hashed value of " + keyHashValue + ")" + " sent to :"
+											+ currentNode.getNodeIpAddress() + ":" + currentNode.getPort());
+								}
+							}
+							currentNode.unlock();
+
+						}
+
 					}
-					fingerTableUpdate(socketWriter,socketReader);
+					fingerTableUpdate(socketWriter, socketReader);
 					// Close connections
 					socketWriter.close();
 					socketReader.close();
 					socket.close();
-					
-					
-				} 
-				}
-				// else If I dont have successor entries and if I am not my 1st predecessor then connect to my predecessor and update my finger table
-				else if (!currentNode.getNodeIpAddress().equals(currentNode.getPredecessor1().getAddress())
+				} else if (!currentNode.getNodeIpAddress().equals(currentNode.getPredecessor1().getAddress())
 						|| (currentNode.getPort() != currentNode.getPredecessor1().getPort())) {
-					
-					// Open socket to predecessor
+					// Open socket to successor
 					socket = new Socket(currentNode.getPredecessor1().getAddress(),
 							currentNode.getPredecessor1().getPort());
 
 					// Open reader/writer to chord node
 					socketWriter = new PrintWriter(socket.getOutputStream(), true);
 					socketReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-					fingerTableUpdate(socketWriter,socketReader);
+					fingerTableUpdate(socketWriter, socketReader);
 					// Close connections
 					socketWriter.close();
 					socketReader.close();
 					socket.close();
-					
+
 				}
-				
+
 				// Stabilize again after delay
 				Thread.sleep(delaySeconds);
 			}
-			
 		} catch (InterruptedException e) {
 			System.err.println("stabilize() thread interrupted");
 			e.printStackTrace();
@@ -160,9 +168,9 @@ public class RingStabilizer extends Thread {
 			e.printStackTrace();
 		}
 	}
-	
+
 	// This method is for finger Table updation
-	private void fingerTableUpdate(PrintWriter socketWriter, BufferedReader socketReader) throws IOException{
+	private void fingerTableUpdate(PrintWriter socketWriter, BufferedReader socketReader) throws IOException {
 		BigInteger bigQuery = BigInteger.valueOf(2L);
 		BigInteger bigSelfId = BigInteger.valueOf(currentNode.getNodeId());
 
@@ -175,7 +183,8 @@ public class RingStabilizer extends Thread {
 
 			// Send query to chord
 			socketWriter.println(DHTMain.FIND_NODE + ":" + bigResult.longValue());
-			//System.out.println("Sent: " + DHTMain.FIND_NODE + ":" + bigResult.longValue());
+			// System.out.println("Sent: " + DHTMain.FIND_NODE + ":" +
+			// bigResult.longValue());
 
 			// Read response from chord
 			String serverResponse = socketReader.readLine();
@@ -185,18 +194,17 @@ public class RingStabilizer extends Thread {
 			String[] addressFragments = serverResponseFragments[1].split(":");
 
 			// Add response to finger table
-			currentNode.getFingerTable().put(i,
-					new Finger(addressFragments[0], Integer.valueOf(addressFragments[1])));
+			currentNode.getFingerTable().put(i, new Finger(addressFragments[0], Integer.valueOf(addressFragments[1])));
 			currentNode.setSuccessor1(currentNode.getFingerTable().get(0));
 			currentNode.setSuccessor2(currentNode.getFingerTable().get(1));
 
-			//System.out.println("Received: " + serverResponse);
+			// System.out.println("Received: " + serverResponse);
 		}
 		currentNode.unlock();
 		currentNode.printFingerTableEntries();
 		
+		System.out.println("printing data in RingStabilizer " + currentNode.getDataStore());
+
 	}
-	
-	
 
 }

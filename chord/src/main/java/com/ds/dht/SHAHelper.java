@@ -35,9 +35,14 @@ public class SHAHelper {
 			
 			// Create 4-byte segments from 20-byte hash then XOR them together
 			// to get final 4-byte hash
-			for (int i = 0; i < 4; i++) {
+			/**for (int i = 0; i < 4; i++) {
 				this.hashedBytes[i + 4] = (byte) (addressBytes[i] ^ addressBytes[i + 4] ^ addressBytes[i + 8]
 						^ addressBytes[i + 12] ^ addressBytes[i + 16]);
+			}**/
+			for (int i = 0; i < 2; i++) {
+				this.hashedBytes[i + 6] = (byte) (addressBytes[i] ^ addressBytes[i+2] ^ addressBytes[i + 4] ^ 
+						addressBytes[i + 6] ^ addressBytes[i + 8] ^ addressBytes[i + 10] ^ addressBytes[i + 12] ^ 
+						addressBytes[i + 12] ^ addressBytes[i + 16] ^ addressBytes[i + 18]);
 			}
 		} catch (NoSuchAlgorithmException e) {
 			System.err.println("Error: SHA-1 DNE");

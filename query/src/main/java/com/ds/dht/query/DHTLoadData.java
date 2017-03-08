@@ -8,6 +8,8 @@ import java.io.PrintWriter;
 import java.net.Socket;
 import java.net.UnknownHostException;
 
+import com.ds.dht.DHTMain;
+import com.ds.dht.Node;
 import com.ds.dht.SHAHelper;
 
 public class DHTLoadData {
@@ -15,6 +17,7 @@ public class DHTLoadData {
 	private String chordNodeAddress;
 	private int chordNodePort;
 	private SHAHelper sha1Hasher;
+	Node currentNode;
 
 	public DHTLoadData(String address, String port) {
 		this.chordNodeAddress = address;
@@ -39,13 +42,13 @@ public class DHTLoadData {
 			// Open reader/writer to chord node
 			PrintWriter socketWriter = new PrintWriter(socket.getOutputStream(), true);
 			BufferedReader socketReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-			try (BufferedReader br = new BufferedReader(
-					new FileReader("data.txt"))) {
+			try (BufferedReader br = new BufferedReader(new FileReader("data.txt"))) {
 
-				String sCurrentLine;
+				String keyValue;
 				System.out.println("starting to load data from data.txt");
-				while ((sCurrentLine = br.readLine()) != null) {
-					socketWriter.println("PUT_VALUE:" + sCurrentLine);
+				while ((keyValue = br.readLine()) != null) {
+
+					socketWriter.println("PUT_VALUE:" + keyValue);
 					String response = socketReader.readLine();
 					System.out.println(response);
 					// TODO check the Response

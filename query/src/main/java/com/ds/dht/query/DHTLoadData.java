@@ -42,7 +42,7 @@ public class DHTLoadData {
 			// Open reader/writer to chord node
 			PrintWriter socketWriter = new PrintWriter(socket.getOutputStream(), true);
 			BufferedReader socketReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-			try (BufferedReader br = new BufferedReader(new FileReader("data.txt"))) {
+			try (BufferedReader br = new BufferedReader(new InputStreamReader(getClass().getResourceAsStream("/data.txt")))) {
 
 				String keyValue;
 				System.out.println("starting to load data from data.txt");

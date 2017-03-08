@@ -163,7 +163,7 @@ public class ProtocolHandler implements Runnable {
 		}
 */
 		else {
-			// We don't have the keyResidingNodeId so we must search our fingers
+			// We don't have the hashedKey so we must search our fingers
 			// for it
 			long minimumDistance = DHTMain.RING_SIZE;
 			Finger closestNodeToKey = null;

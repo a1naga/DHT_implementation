@@ -107,7 +107,7 @@ public class RingStabilizer extends Thread {
 
 						// Redistribute key value pair from new successor to
 						// itself
-						socketWriter.println(DHTMain.REQUEST_KEY_VALUES + ":" + currentNode.getNodeId());
+						/***socketWriter.println(DHTMain.REQUEST_KEY_VALUES + ":" + currentNode.getNodeId());
 						serverResponse = socketReader.readLine();
 						if (serverResponse != null && !serverResponse.isEmpty() && serverResponse != "") {
 							String[] keyValuePairs = serverResponse.split("::");
@@ -129,7 +129,7 @@ public class RingStabilizer extends Thread {
 							}
 							currentNode.unlock();
 
-						}
+						}***/
 
 					}
 					fingerTableUpdate(socketWriter, socketReader);

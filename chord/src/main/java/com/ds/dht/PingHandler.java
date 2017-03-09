@@ -38,18 +38,14 @@ public class PingHandler implements Runnable {
     private void pingSuccessor() {
         // Only send heartbeats if we are not the destination
     	Finger successor = currentNode.getSuccessor1();
-    	Socket socket=null;
-    	PrintWriter socketWriter=null;
-    	BufferedReader socketReader=null;
         if (!currentNode.getNodeIpAddress().equals(successor.getAddress()) || (currentNode.getPort() != successor.getPort())) {
-           try {
-            	//System.out.println("From pingSuccessor: going to socket to "+successor.getAddress()+"-"+successor.getPort());
+            try {
                 // Open socket to successor
-                socket = new Socket(successor.getAddress(), successor.getPort());
+                Socket socket = new Socket(successor.getAddress(), successor.getPort());
 
                 // Open reader/writer to chord node
-                socketWriter = new PrintWriter(socket.getOutputStream(), true);
-                socketReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+                PrintWriter socketWriter = new PrintWriter(socket.getOutputStream(), true);
+                BufferedReader socketReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 
                 // Send a ping
                 socketWriter.println(DHTMain.PING_QUERY + ":" + currentNode.getNodeId());
@@ -72,24 +68,10 @@ public class PingHandler implements Runnable {
                 socketReader.close();
                 socket.close();
             } catch (IOException e) {
-            	System.out.println("pingSuccessor: IOException:"+e.getMessage());
                 currentNode.lock();
-                System.out.println("setting successor1 to "+currentNode.getSuccessor2().getPort());
                 currentNode.setSuccessor1(currentNode.getSuccessor2());
                 currentNode.getFingerTable().put(0, currentNode.getSuccessor2());
                 currentNode.unlock();
-             // Close connections
-                socketWriter.close();
-                try {
-                	socketReader.close();
-					socket.close();
-				} catch (IOException e1) {
-					// TODO Auto-generated catch block
-					e1.printStackTrace();
-				}
-            }
-            catch(Exception ex){
-            	System.out.println("Excepton occured in pingSuccessor: "+ex.getMessage());
             }
         }
     }
@@ -129,9 +111,6 @@ public class PingHandler implements Runnable {
                 currentNode.lock();
                 currentNode.setPredecessor1(currentNode.getPredecessor2());
                 currentNode.unlock();
-            }
-            catch(Exception ex){
-            	System.out.println("Excepton occured in pingPredecessor: "+ex.getMessage());
             }
         }
     }

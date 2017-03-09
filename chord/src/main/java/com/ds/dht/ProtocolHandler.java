@@ -7,6 +7,7 @@ import java.io.PrintWriter;
 import java.net.Socket;
 import java.util.Iterator;
 import java.util.Map;
+import java.net.UnknownHostException;
 
 public class ProtocolHandler implements Runnable {
 
@@ -110,6 +111,7 @@ public class ProtocolHandler implements Runnable {
 					socketWriter.println(response);
 
 					break;
+
 				}
 
 				case DHTMain.REQUEST_KEY_VALUES: {
@@ -119,6 +121,20 @@ public class ProtocolHandler implements Runnable {
 
 					// Send response back to client
 					socketWriter.println(response);
+					break;
+				}
+				case DHTMain.PUT_REPLICA:{
+					//Store replicated data to the given node
+					String[] contentFragments=content.split(":");
+					String dataKey=contentFragments[0];
+					String dataValue=contentFragments[1];
+					currentNode.lock();
+					
+					//put key,value to dataStore
+					currentNode.getDataStore().put(dataKey, dataValue);
+					System.out.println("Replicated "+dataKey+"-"+dataValue+" to "+currentNode.getNodeIpAddress()+":"+currentNode.getPort());
+					
+					currentNode.unlock();
 					break;
 				}
 				}

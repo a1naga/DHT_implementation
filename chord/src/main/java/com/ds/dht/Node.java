@@ -90,7 +90,6 @@ public class Node {
 		// Initialize finger table and successors
 		initializeFingers();
 		initializeSuccessors();
-		printFingerTableEntries();
 
 		// Start listening for connections and heartbeats from neighbors
 		new Thread(new NodeServer(this)).start();
@@ -163,7 +162,7 @@ public class Node {
 				e.printStackTrace();
 			}
 		}
-		//printFingerTableEntries();
+		printFingerTableEntries();
 	}
 
 	/**
@@ -362,11 +361,6 @@ public class Node {
 					+ "     " + finger.getNodeId());
 
 		}
-		System.out.println("Current Node :"+this.nodeIpAddress+"-"+this.port+" nodeid:"+this.nodeId);
-		System.out.println("Successor1 :"+this.getSuccessor1().getPort()+" nodeid:"+this.getSuccessor1().getNodeId());
-		System.out.println("Successor2 :"+this.getSuccessor2().getPort()+" nodeid:"+this.getSuccessor2().getNodeId());
-		System.out.println("Predecessor1:"+this.getPredecessor1().getPort()+" nodeid:"+this.getPredecessor1().getNodeId());
-		
 		System.out.println("-------------------- Finger Table Entries -------------------");
 	}
 

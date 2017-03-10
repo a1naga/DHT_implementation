@@ -45,7 +45,7 @@ public class Node {
 		this.port = Integer.valueOf(port);
 		System.out.println("Creating a new Chord ring");
 		initialize();
-		printKeyValueMap();
+		//printKeyValueMap();
 	}
 
 	/**
@@ -72,7 +72,7 @@ public class Node {
 		this.bootStrapNodePort = Integer.valueOf(bootStrapNodePort);
 		System.out.println("Connecting to existing node " + this.bootStrapNodeAddress + ":" + this.bootStrapNodePort);
 		initialize();
-		printKeyValueMap();
+		//printKeyValueMap();
 
 	}
 
@@ -90,15 +90,17 @@ public class Node {
 		// Initialize finger table and successors
 		initializeFingers();
 		initializeSuccessors();
-
+		printFingerTableEntries();
+		
 		// Start listening for connections and heartbeats from neighbors
 		new Thread(new NodeServer(this)).start();
 		new Thread(new RingStabilizer(this)).start();
 		new Thread(new PingHandler(this)).start();
 
-		// If this is the only node in the ring
+		// If this is not the only node in the ring
 		if (this.bootStrapNodeAddress != null) {
 			distributeKeyValues();
+			printKeyValueMap();
 		}
 	}
 
@@ -162,7 +164,7 @@ public class Node {
 				e.printStackTrace();
 			}
 		}
-		printFingerTableEntries();
+//		printFingerTableEntries();
 	}
 
 	/**
@@ -200,7 +202,7 @@ public class Node {
 				e.printStackTrace();
 			}
 		}
-		printFingerTableEntries();
+//		printFingerTableEntries();
 	}
 
 	private void printKeyValueMap() {
@@ -211,7 +213,7 @@ public class Node {
 	}
 
 	/**
-	 * Distributes keyValue pairs from the predecessors and successors to the
+	 * Distributes keyValue pairs from the successors to the
 	 * newly added node in the ring.
 	 */
 	private void distributeKeyValues() {
@@ -250,7 +252,7 @@ public class Node {
 			}
 		} catch (Exception ex) {
 			logError("Could not open connection to first successor");
-			System.out.println("Error from distributeKeyValues(): " + ex.getLocalizedMessage());
+			System.out.println("Error from distributeKeyValues(): " + ex.getMessage());
 			ex.printStackTrace();
 
 		}
@@ -361,6 +363,7 @@ public class Node {
 					+ "     " + finger.getNodeId());
 
 		}
+		System.out.println("Node: "+this.getNodeId()+", Successor1: "+getSuccessor1().getNodeId()+", Predecessor1: "+getPredecessor1().getNodeId()+", Successor2: "+getSuccessor2().getNodeId()+", Predecessor2: "+getPredecessor2().getNodeId());
 		System.out.println("-------------------- Finger Table Entries -------------------");
 	}
 

@@ -26,8 +26,10 @@ public class ProtocolHandler implements Runnable {
 
 		try {
 			// Create readers and writers from socket
-			PrintWriter socketWriter = new PrintWriter(socket.getOutputStream(), true);
-			BufferedReader socketReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+			PrintWriter socketWriter = new PrintWriter(
+					socket.getOutputStream(), true);
+			BufferedReader socketReader = new BufferedReader(
+					new InputStreamReader(socket.getInputStream()));
 
 			// Read input from client
 			String query;
@@ -47,7 +49,8 @@ public class ProtocolHandler implements Runnable {
 					// System.out.println("Sent: " + response);
 
 					// Send response back to client
-					System.out.println("GET call output from node " + currentNode.getNodeId() + " " + response);
+					System.out.println("GET call output from node "
+							+ currentNode.getNodeId() + " " + response);
 					socketWriter.println(response);
 
 					break;
@@ -66,7 +69,8 @@ public class ProtocolHandler implements Runnable {
 					String[] contentFragments = content.split(":");
 					String address = contentFragments[0];
 					int port = Integer.valueOf(contentFragments[1]);
-					System.out.println("GOT NEW PREDECESSOR address : " + address + ", port : " + port);
+					System.out.println("GOT NEW PREDECESSOR address : "
+							+ address + ", port : " + port);
 					// Acquire lock
 					currentNode.lock();
 
@@ -83,9 +87,11 @@ public class ProtocolHandler implements Runnable {
 				}
 				case DHTMain.REQUEST_PREDECESSOR: {
 					// Return the first predecessor address:port
-					String response = currentNode.getPredecessor1().getAddress() + ":"
+					String response = currentNode.getPredecessor1()
+							.getAddress()
+							+ ":"
 							+ currentNode.getPredecessor1().getPort();
-							// System.out.println("Sent: " + response);
+					// System.out.println("Sent: " + response);
 
 					// Send response back to client
 					socketWriter.println(response);
@@ -121,6 +127,23 @@ public class ProtocolHandler implements Runnable {
 					socketWriter.println(response);
 					break;
 				}
+				case DHTMain.PUT_REPLICA: {
+					// Store replicated data to the given node
+					String[] contentFragments = content.split(":");
+					String dataKey = contentFragments[0];
+					String dataValue = contentFragments[1];
+					currentNode.lock();
+
+					// put key,value to dataStore
+					currentNode.getDataStore().put(dataKey, dataValue);
+					System.out.println("Replicated " + dataKey + "-"
+							+ dataValue + " to "
+							+ currentNode.getNodeIpAddress() + ":"
+							+ currentNode.getPort());
+
+					currentNode.unlock();
+					break;
+				}
 				}
 			}
 
@@ -140,30 +163,38 @@ public class ProtocolHandler implements Runnable {
 		// Get long of query
 		SHAHelper keyHasher = new SHAHelper(key);
 		long hashedKey = keyHasher.getLong();
-		System.out.println("Hashed Value for GET --------> " + hashedKey + " my current node id -----> " + currentNode.getNodeId());
+		System.out.println("Hashed Value for GET --------> " + hashedKey
+				+ " my current node id -----> " + currentNode.getNodeId());
 
 		// Wrap the queryNodeId if it is as big as the ring
 		if (hashedKey >= DHTMain.RING_SIZE) {
 			hashedKey -= DHTMain.RING_SIZE;
 		}
 
-		String response = "Not found.";
+		String response = "Key NOT FOUND.";
 
 		// If the query is greater than our predecessor id and less than equal
 		// to our id then we have the value
 		if (isThisMyNode(hashedKey)) {
-			System.out.println("isThisMyNode true in GET  current node id ----> " + currentNode.getNodeId());
-			response = "VALUE_FOUND:Request acknowledged on node " + currentNode.getNodeId() + ":"
-					+ currentNode.getPort() + ":" + currentNode.getDataStore().get(key);
+			System.out
+					.println("isThisMyNode true in GET  current node id ----> "
+							+ currentNode.getNodeId());
+			String resourceValue = currentNode.getDataStore().get(key);
+			if (resourceValue != null && !resourceValue.isEmpty())
+				response = "VALUE_FOUND:Request acknowledged on node "
+						+ currentNode.getNodeId() + ":" + currentNode.getPort()
+						+ ":" + currentNode.getDataStore().get(key);
 		}
 
-/*		else if (isThisNextNode(keyResidingNodeId)) {
-			response = "VALUE_FOUND:Request acknowledged on node " + currentNode.getSuccessor1().getAddress() + ":"
-					+ currentNode.getSuccessor1().getPort() + ":" + currentNode.getDataStore().get(key);
-		}
-*/
+		/*
+		 * else if (isThisNextNode(keyResidingNodeId)) { response =
+		 * "VALUE_FOUND:Request acknowledged on node " +
+		 * currentNode.getSuccessor1().getAddress() + ":" +
+		 * currentNode.getSuccessor1().getPort() + ":" +
+		 * currentNode.getDataStore().get(key); }
+		 */
 		else {
-			// We don't have the hashedKey so we must search our fingers
+			// We don't have the keyResidingNodeId so we must search our fingers
 			// for it
 			long minimumDistance = DHTMain.RING_SIZE;
 			Finger closestNodeToKey = null;
@@ -179,7 +210,8 @@ public class ProtocolHandler implements Runnable {
 				if (finger.getNodeId() >= hashedKey) {
 					distance = finger.getNodeId() - hashedKey;
 				} else {
-					distance = DHTMain.RING_SIZE + finger.getNodeId() - hashedKey;
+					distance = DHTMain.RING_SIZE + finger.getNodeId()
+							- hashedKey;
 				}
 
 				// If the distance we have found is smaller than the current
@@ -190,16 +222,21 @@ public class ProtocolHandler implements Runnable {
 				}
 			}
 
-			System.out.println("GET call ---> hashedKey: " + hashedKey + " minimum distance: " + minimumDistance
-					+ " on " + closestNodeToKey.getAddress() + ":" + closestNodeToKey.getPort());
+			System.out.println("GET call ---> hashedKey: " + hashedKey
+					+ " minimum distance: " + minimumDistance + " on "
+					+ closestNodeToKey.getAddress() + ":"
+					+ closestNodeToKey.getPort());
 
 			try {
 				// Open socket to chord node
-				Socket socket = new Socket(closestNodeToKey.getAddress(), closestNodeToKey.getPort());
+				Socket socket = new Socket(closestNodeToKey.getAddress(),
+						closestNodeToKey.getPort());
 
 				// Open reader/writer to chord node
-				PrintWriter socketWriter = new PrintWriter(socket.getOutputStream(), true);
-				BufferedReader socketReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+				PrintWriter socketWriter = new PrintWriter(
+						socket.getOutputStream(), true);
+				BufferedReader socketReader = new BufferedReader(
+						new InputStreamReader(socket.getInputStream()));
 
 				// Send query to chord
 				socketWriter.println(DHTMain.FIND_VALUE + ":" + key);
@@ -208,8 +245,10 @@ public class ProtocolHandler implements Runnable {
 
 				// Read response from chord
 				String serverResponse = socketReader.readLine();
-				System.out.println("GET call ----> Response from node " + closestNodeToKey.getAddress() + ", port "
-						+ closestNodeToKey.getPort() + ", position " + " (" + closestNodeToKey.getNodeId() + "):");
+				System.out.println("GET call ----> Response from node "
+						+ closestNodeToKey.getAddress() + ", port "
+						+ closestNodeToKey.getPort() + ", position " + " ("
+						+ closestNodeToKey.getNodeId() + "):");
 				response = serverResponse;
 
 				// Close connections
@@ -247,15 +286,18 @@ public class ProtocolHandler implements Runnable {
 
 			currentNode.getDataStore().put(keyValueArray[0], keyValueArray[1]);
 
-			response = "VALUE_STORED for " +  hashedKey + " on node " + currentNode.getNodeId() + ":" + currentNode.getPort();
+			response = "VALUE_STORED for " + hashedKey + " on node "
+					+ currentNode.getNodeId() + ":" + currentNode.getPort();
 		}
 
-		/*else if (isThisNextNode(keyResidingNodeId)) {
-
-			currentNode.getDataStore().put(keyValueArray[0], keyValueArray[1]);
-
-			response = "VALUE_STORED: on node " + currentNode.getNodeId() + ":" + currentNode.getPort();
-		}*/
+		/*
+		 * else if (isThisNextNode(keyResidingNodeId)) {
+		 * 
+		 * currentNode.getDataStore().put(keyValueArray[0], keyValueArray[1]);
+		 * 
+		 * response = "VALUE_STORED: on node " + currentNode.getNodeId() + ":" +
+		 * currentNode.getPort(); }
+		 */
 
 		// TODO remove isThisNextNode method below which is not needed
 
@@ -277,7 +319,8 @@ public class ProtocolHandler implements Runnable {
 				if (finger.getNodeId() >= hashedKey) {
 					distance = finger.getNodeId() - hashedKey;
 				} else {
-					distance = DHTMain.RING_SIZE + finger.getNodeId() - hashedKey;
+					distance = DHTMain.RING_SIZE + finger.getNodeId()
+							- hashedKey;
 				}
 
 				// If the distance we have found is smaller than the current
@@ -288,16 +331,21 @@ public class ProtocolHandler implements Runnable {
 				}
 			}
 
-			System.out.println("keyResidingNodeId: " + hashedKey + " minimum distance: " + minimumDistance
-					+ " on " + closestNodeToKey.getAddress() + ":" + closestNodeToKey.getPort());
+			System.out.println("keyResidingNodeId: " + hashedKey
+					+ " minimum distance: " + minimumDistance + " on "
+					+ closestNodeToKey.getAddress() + ":"
+					+ closestNodeToKey.getPort());
 
 			try {
 				// Open socket to closest node
-				Socket socket = new Socket(closestNodeToKey.getAddress(), closestNodeToKey.getPort());
+				Socket socket = new Socket(closestNodeToKey.getAddress(),
+						closestNodeToKey.getPort());
 
 				// Open reader/writer to closest node
-				PrintWriter socketWriter = new PrintWriter(socket.getOutputStream(), true);
-				BufferedReader socketReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+				PrintWriter socketWriter = new PrintWriter(
+						socket.getOutputStream(), true);
+				BufferedReader socketReader = new BufferedReader(
+						new InputStreamReader(socket.getInputStream()));
 
 				// Send query to chord
 				socketWriter.println(DHTMain.PUT_VALUE + ":" + keyValue);
@@ -306,8 +354,10 @@ public class ProtocolHandler implements Runnable {
 
 				// Read response from chord
 				String serverResponse = socketReader.readLine();
-				System.out.println("Response from node " + closestNodeToKey.getAddress() + ", port "
-						+ closestNodeToKey.getPort() + ", position " + " (" + closestNodeToKey.getNodeId() + "):");
+				System.out.println("Response from node "
+						+ closestNodeToKey.getAddress() + ", port "
+						+ closestNodeToKey.getPort() + ", position " + " ("
+						+ closestNodeToKey.getNodeId() + "):");
 				response = serverResponse;
 
 				// Close connections
@@ -339,9 +389,12 @@ public class ProtocolHandler implements Runnable {
 		// equal
 		// to our id then we have the value
 		if (isThisMyNode(queryNodeId)) {
-			response = DHTMain.NODE_FOUND + ":" + currentNode.getNodeIpAddress() + ":" + currentNode.getPort();
+			response = DHTMain.NODE_FOUND + ":"
+					+ currentNode.getNodeIpAddress() + ":"
+					+ currentNode.getPort();
 		} else if (isThisNextNode(queryNodeId)) {
-			response = DHTMain.NODE_FOUND + ":" + currentNode.getSuccessor1().getAddress() + ":"
+			response = DHTMain.NODE_FOUND + ":"
+					+ currentNode.getSuccessor1().getAddress() + ":"
 					+ currentNode.getSuccessor1().getPort();
 		} else { // We don't have the query so we must search our fingers for it
 			long minimumDistance = DHTMain.RING_SIZE;
@@ -358,7 +411,8 @@ public class ProtocolHandler implements Runnable {
 				if (queryNodeId >= finger.getNodeId()) {
 					distance = queryNodeId - finger.getNodeId();
 				} else {
-					distance = queryNodeId + DHTMain.RING_SIZE - finger.getNodeId();
+					distance = queryNodeId + DHTMain.RING_SIZE
+							- finger.getNodeId();
 				}
 
 				// If the distance we have found is smaller than the current
@@ -369,16 +423,21 @@ public class ProtocolHandler implements Runnable {
 				}
 			}
 
-			System.out.println("queryid: " + queryNodeId + " minimum distance: " + minimumDistance + " on "
-					+ closestNodeToKey.getAddress() + ":" + closestNodeToKey.getPort());
+			System.out.println("queryid: " + queryNodeId
+					+ " minimum distance: " + minimumDistance + " on "
+					+ closestNodeToKey.getAddress() + ":"
+					+ closestNodeToKey.getPort());
 
 			try {
 				// Open socket to chord node
-				Socket socket = new Socket(closestNodeToKey.getAddress(), closestNodeToKey.getPort());
+				Socket socket = new Socket(closestNodeToKey.getAddress(),
+						closestNodeToKey.getPort());
 
 				// Open reader/writer to chord node
-				PrintWriter socketWriter = new PrintWriter(socket.getOutputStream(), true);
-				BufferedReader socketReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+				PrintWriter socketWriter = new PrintWriter(
+						socket.getOutputStream(), true);
+				BufferedReader socketReader = new BufferedReader(
+						new InputStreamReader(socket.getInputStream()));
 
 				// Send query to chord
 				socketWriter.println(DHTMain.FIND_NODE + ":" + queryNodeId);
@@ -387,8 +446,10 @@ public class ProtocolHandler implements Runnable {
 
 				// Read response from chord
 				String serverResponse = socketReader.readLine();
-				System.out.println("Response from node " + closestNodeToKey.getAddress() + ", port "
-						+ closestNodeToKey.getPort() + ", position " + " (" + closestNodeToKey.getNodeId() + "):");
+				System.out.println("Response from node "
+						+ closestNodeToKey.getAddress() + ", port "
+						+ closestNodeToKey.getPort() + ", position " + " ("
+						+ closestNodeToKey.getNodeId() + "):");
 
 				response = serverResponse;
 
@@ -413,11 +474,13 @@ public class ProtocolHandler implements Runnable {
 		if (currentNode.getNodeId() > currentNode.getPredecessor1().getNodeId()) {
 			// If the queryNodeId is between my predecessor and me, the query
 			// belongs to me
-			if ((queryNodeId > currentNode.getPredecessor1().getNodeId()) && (queryNodeId <= currentNode.getNodeId())) {
+			if ((queryNodeId > currentNode.getPredecessor1().getNodeId())
+					&& (queryNodeId <= currentNode.getNodeId())) {
 				response = true;
 			}
 		} else { // If we are wrapping
-			if ((queryNodeId > currentNode.getPredecessor1().getNodeId()) || (queryNodeId <= currentNode.getNodeId())) {
+			if ((queryNodeId > currentNode.getPredecessor1().getNodeId())
+					|| (queryNodeId <= currentNode.getNodeId())) {
 				response = true;
 			}
 		}
@@ -432,11 +495,13 @@ public class ProtocolHandler implements Runnable {
 		if (currentNode.getNodeId() < currentNode.getSuccessor1().getNodeId()) {
 			// If the query id is between our successor and us, the query
 			// belongs to our successor
-			if ((queryNodeId > currentNode.getNodeId()) && (queryNodeId <= currentNode.getSuccessor1().getNodeId())) {
+			if ((queryNodeId > currentNode.getNodeId())
+					&& (queryNodeId <= currentNode.getSuccessor1().getNodeId())) {
 				response = true;
 			}
 		} else { // If we are wrapping
-			if ((queryNodeId > currentNode.getNodeId()) || (queryNodeId <= currentNode.getSuccessor1().getNodeId())) {
+			if ((queryNodeId > currentNode.getNodeId())
+					|| (queryNodeId <= currentNode.getSuccessor1().getNodeId())) {
 				response = true;
 			}
 		}
@@ -446,37 +511,46 @@ public class ProtocolHandler implements Runnable {
 
 	private String requestKeyValues(String strNodeId) {
 		StringBuffer sbResponse = new StringBuffer();
-		long nodeId = Long.valueOf(strNodeId);
+		long newNodeId = Long.valueOf(strNodeId);
 		SHAHelper queryHasher;
 		try {
-			for (Iterator<Map.Entry<String, String>> it = currentNode.getDataStore().entrySet().iterator(); it
-					.hasNext();) {
+			for (Iterator<Map.Entry<String, String>> it = currentNode
+					.getDataStore().entrySet().iterator(); it.hasNext();) {
 				Map.Entry<String, String> entry = it.next();
 				String strKey = entry.getKey();
 				queryHasher = new SHAHelper(strKey);
-				long keyId = queryHasher.getLong();
-				// Wrap the keyid if it is as big as the ring
-				if (keyId >= DHTMain.RING_SIZE) {
-					keyId -= DHTMain.RING_SIZE;
-				}
-				if (keyId < nodeId) {
+				long hashedKeyEntry = queryHasher.getLong();
+				if (newNodeId < currentNode.getNodeId()
+						&& ((hashedKeyEntry > currentNode.getNodeId()) || (hashedKeyEntry < newNodeId))) {
 					// sbResponse.append(strKey + ":" + entry.getValue());
-					sbResponse.append(strKey + ":" + entry.getValue() + ":" + keyId);
+					sbResponse.append(strKey + ":" + entry.getValue() + ":"
+							+ hashedKeyEntry);
 					sbResponse.append("::");
 
 					// Remove the key value pair from the current node
 					currentNode.lock();
 					it.remove();
 					currentNode.unlock();
+				} else if ((newNodeId > currentNode.getNodeId())
+						&& (hashedKeyEntry > currentNode.getNodeId() && hashedKeyEntry < newNodeId)) {
+					sbResponse.append(strKey + ":" + entry.getValue() + ":"
+							+ hashedKeyEntry);
+					sbResponse.append("::");
+					// Remove the key value pair from the current node
+					currentNode.lock();
+					it.remove();
+					currentNode.unlock();
 				}
 			}
+
 		} catch (Exception ex) {
 			ex.printStackTrace();
 		}
+
 		String response = sbResponse.toString();
 		if (response != null && !response.isEmpty() && response != "")
 			response = response.substring(0, response.length() - 2);
 		return response;
-	}
 
+	}
 }

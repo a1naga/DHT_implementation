@@ -11,6 +11,7 @@ public class DHTMain {
 	public final static String PING_RESPONSE = "YES I AM THERE";
 	public final static String PUT_VALUE = "PUT_VALUE";
 	public final static String REQUEST_KEY_VALUES = "REQUEST_KEY_VALUES";
+	public final static String PUT_REPLICA="PUT_REPLICA";
 
 	public final static long RING_SIZE = 65536;
 	public final static int FINGER_TABLE_SIZE = 16;

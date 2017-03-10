@@ -130,8 +130,8 @@ public class ProtocolHandler implements Runnable {
 				case DHTMain.PUT_REPLICA: {
 					// Store replicated data to the given node
 					String[] contentFragments = content.split(":");
-					String dataKey = contentFragments[0];
-					String dataValue = contentFragments[1];
+					String dataKey = contentFragments[2];
+					String dataValue = contentFragments[3];
 					currentNode.lock();
 
 					// put key,value to dataStore
@@ -523,8 +523,7 @@ public class ProtocolHandler implements Runnable {
 				if (newNodeId < currentNode.getNodeId()
 						&& ((hashedKeyEntry > currentNode.getNodeId()) || (hashedKeyEntry < newNodeId))) {
 					// sbResponse.append(strKey + ":" + entry.getValue());
-					sbResponse.append(strKey + ":" + entry.getValue() + ":"
-							+ hashedKeyEntry);
+					sbResponse.append(strKey + ":" + entry.getValue());
 					sbResponse.append("::");
 
 					// Remove the key value pair from the current node
@@ -533,8 +532,7 @@ public class ProtocolHandler implements Runnable {
 					currentNode.unlock();
 				} else if ((newNodeId > currentNode.getNodeId())
 						&& (hashedKeyEntry > currentNode.getNodeId() && hashedKeyEntry < newNodeId)) {
-					sbResponse.append(strKey + ":" + entry.getValue() + ":"
-							+ hashedKeyEntry);
+					sbResponse.append(strKey + ":" + entry.getValue());
 					sbResponse.append("::");
 					// Remove the key value pair from the current node
 					currentNode.lock();

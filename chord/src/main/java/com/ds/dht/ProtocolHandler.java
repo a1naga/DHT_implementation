@@ -154,6 +154,35 @@ public class ProtocolHandler implements Runnable {
 
 					break;
 				}
+				case DHTMain.FIND_LEADER: {
+					// Parse address and port from message
+					String response = findLeader();
+					// Send response back to client
+					socketWriter.println(response);
+					break;
+				}
+
+				case DHTMain.ELECT_LEADER: {
+					// Parse address and port from message
+					String[] contentFragments = content.split(":");
+					long electionInitiator = Long.valueOf(contentFragments[0]);
+
+					// Reply to the ping
+					leaderElection(electionInitiator);
+					break;
+				}
+
+				case DHTMain.LEADER_ELECTED: {
+					// Parse address and port from message
+					String[] contentFragments = content.split(":");
+					long electionInitiator = Long.valueOf(contentFragments[0]);
+					String ipAddress = contentFragments[1];
+					int port = Integer.valueOf(contentFragments[2]);
+
+					// Reply to the ping
+					leaderElected(electionInitiator, ipAddress, port);
+					break;
+				}
 				}
 			}
 
@@ -668,5 +697,73 @@ public class ProtocolHandler implements Runnable {
 			e.printStackTrace();
 		}
 		return response;
+	}
+	
+	private String findLeader() {
+		String response = String.valueOf(currentNode.getLeaderId()) + ":" + currentNode.getLeaderIpAddress() + ":"
+				+ currentNode.getLeaderPort();
+		return response;
+	}
+
+	private void leaderElection(Long electionInitiator) {
+		System.out.println(
+				"<-------------------------Leader Election Started ----------------------->" + electionInitiator);
+
+		if (currentNode.getNodeId() == electionInitiator) {
+			if (currentNode.getElectionMessage().equals(DHTMain.ELECT_LEADER)) {
+				currentNode.setElectionMessage(DHTMain.LEADER_ELECTED);
+				System.out.println("I am the new Leader : " + currentNode.getNodeId());
+				currentNode.setLeaderId(currentNode.getNodeId());
+				currentNode.setLeaderIpAddress(currentNode.getNodeIpAddress());
+				currentNode.setLeaderPort(currentNode.getPort());
+
+				String messageToPass = DHTMain.LEADER_ELECTED + ":" + currentNode.getNodeId() + ":"
+						+ currentNode.getNodeIpAddress() + ":" + currentNode.getPort();
+				passElectionMessageToNextNode(messageToPass);
+				System.out.println("Leader is elected");
+
+			}
+
+		} else if (currentNode.getNodeId() > electionInitiator) {
+			currentNode.setElectionMessage(DHTMain.ELECT_LEADER);
+			String messageToPass = DHTMain.ELECT_LEADER + ":" + currentNode.getNodeId();
+			passElectionMessageToNextNode(messageToPass);
+		} else if (currentNode.getNodeId() < electionInitiator) {
+			currentNode.setElectionMessage(DHTMain.ELECT_LEADER);
+			String messageToPass = DHTMain.ELECT_LEADER + ":" + electionInitiator;
+			passElectionMessageToNextNode(messageToPass);
+
+		}
+
+	}
+
+	private void leaderElected(Long electionInitiator, String ipAddress, int port) {
+		System.out.println("Leader Elected  :" + electionInitiator);
+		if (!currentNode.getElectionMessage().equals(DHTMain.LEADER_ELECTED)) {
+			currentNode.setElectionMessage(DHTMain.LEADER_ELECTED);
+			currentNode.setLeaderId(electionInitiator);
+			currentNode.setLeaderIpAddress(ipAddress);
+			currentNode.setLeaderPort(port);
+			String messageToPass = DHTMain.LEADER_ELECTED + ":" + electionInitiator + ":" + ipAddress + ":" + port;
+			passElectionMessageToNextNode(messageToPass);
+		}
+	}
+
+	private void passElectionMessageToNextNode(String messageToPass) {
+		try {
+			// Open socket to chord node
+			Socket socket = new Socket(currentNode.getSuccessor1().getAddress(), currentNode.getSuccessor1().getPort());
+			// Open reader/writer to chord node
+			PrintWriter socketWriter = new PrintWriter(socket.getOutputStream(), true);
+			BufferedReader socketReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+			// Send query to chord
+			socketWriter.println(messageToPass);
+			// Close connections
+			socketWriter.close();
+			socketReader.close();
+			socket.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 	}
 }

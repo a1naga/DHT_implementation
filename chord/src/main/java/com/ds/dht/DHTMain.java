@@ -13,7 +13,10 @@ public class DHTMain {
 	public final static String REQUEST_KEY_VALUES = "REQUEST_KEY_VALUES";
 	public final static String PUT_REPLICA="PUT_REPLICA";
 	public final static String FIND_VALUE_IN_SUCCESSOR="FIND_VALUE_IN_SUCCESSOR";
-
+	public final static String FIND_LEADER = "FIND_LEADER";
+	public final static String ELECT_LEADER = "ELECT_LEADER";
+	public final static String LEADER_ELECTED = "LEADER_ELECTED";
+	
 	public final static long RING_SIZE = 65536;
 	public final static int FINGER_TABLE_SIZE = 16;
 

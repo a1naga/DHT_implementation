@@ -219,7 +219,7 @@ public class ProtocolHandler implements Runnable {
 					.println("isThisMyNode true in GET  current node id ----> "
 							+ currentNode.getNodeId());
 			String resourceValue = currentNode.getDataStore().get(key);
-			if (resourceValue != null && !resourceValue.isEmpty())
+			if (resourceValue != null && !resourceValue.isEmpty() && resourceValue!="")
 				response = "VALUE_FOUND:Request acknowledged on node "
 						+ currentNode.getNodeId() + ":" + currentNode.getPort()
 						+ ":" + currentNode.getDataStore().get(key);
@@ -228,7 +228,7 @@ public class ProtocolHandler implements Runnable {
 		else if (isThisNextNode(hashedKey)) {
 			String strKey = getValueInSuccessor(key);
 			System.out.println(strKey);
-			if (key != null && !key.isEmpty()) {
+			if (strKey != null && !strKey.isEmpty() && strKey!="") {
 				response = "VALUE_FOUND:Request acknowledged on node "
 						+ currentNode.getSuccessor1().getAddress() + ":"
 						+ currentNode.getSuccessor1().getPort() + ":"
@@ -340,10 +340,11 @@ public class ProtocolHandler implements Runnable {
 		// If the query is greater than our predecessor id and less than equal
 		// to our id then we have the value
 		if (isThisMyNode(hashedKey)) {
-
+			currentNode.lock();
 			currentNode.getDataStore().put(keyValueArray[0], keyValueArray[1]);
-
-			response = "VALUE_STORED for " + hashedKey + " on node "
+			currentNode.unlock();
+			response = "(" + keyValueArray[0] + "," + keyValueArray[1]
+					+ ")  stored for " + hashedKey + " on node "
 					+ currentNode.getNodeId() + ":" + currentNode.getPort();
 		}
 
@@ -352,9 +353,10 @@ public class ProtocolHandler implements Runnable {
 			putValueInSuccessor(keyValueArray[0], keyValueArray[1]);
 			 
 			 //currentNode.getDataStore().put(keyValueArray[0], keyValueArray[1]);
-			 
-			 response = "VALUE_STORED: on node " + currentNode.getNodeId() + ":" +
-			 currentNode.getPort(); 
+			response = "(" + keyValueArray[0] + "," + keyValueArray[1]
+					+ ")  stored for " + hashedKey + " on node "
+					+ currentNode.getSuccessor1().getNodeId() + ":"
+					+ currentNode.getSuccessor1().getPort();
 		}
 			
 //		 else if (isThisNextNode(hashedKey)) {
@@ -373,7 +375,7 @@ public class ProtocolHandler implements Runnable {
 			long minimumDistance = DHTMain.RING_SIZE;
 			Finger closestNodeToKey = null;
 
-			currentNode.lock();
+//			currentNode.lock();
 
 			// Look for a node identifier in the finger table that is less than
 			// the keyResidingNodeId and closest in the ID space to the
@@ -441,7 +443,7 @@ public class ProtocolHandler implements Runnable {
 				e.printStackTrace();
 			}
 
-			currentNode.unlock();
+//			currentNode.unlock();
 		}
 
 		return response;

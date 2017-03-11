@@ -105,6 +105,14 @@ public class RingStabilizer extends Thread {
 									currentNode.getFingerTable().get(0));
 							currentNode.getFingerTable().put(0, newSuccessor);
 
+							// // Update successor entries to reflect new
+							// successor
+							// //
+							// currentNode.setSuccessor2(currentNode.getFingerTable().get(1));
+							// //
+							// currentNode.setSuccessor1(currentNode.getFingerTable().get(0));
+							// currentNode.setSuccessor2(currentNode.getSuccessor1());
+							// currentNode.setSuccessor1(newSuccessor);
 							currentNode.unlock();
 
 							// Close connections
@@ -152,7 +160,7 @@ public class RingStabilizer extends Thread {
 
 						// manage replicas///code by priya
 						// replicate data to successors
-						 manageReplica();
+//						 manageReplica();
 
 					}
 					// else If I dont have successor entries and if I am not my
@@ -182,7 +190,7 @@ public class RingStabilizer extends Thread {
 
 						// manage replicas///code by priya
 						// replicate data to successors
-						 manageReplica();
+//						 manageReplica();
 
 					}
 				} catch (UnknownHostException e) {
@@ -216,7 +224,6 @@ public class RingStabilizer extends Thread {
 							// update finger table
 							fingerTableUpdate(socketWriter, socketReader);
 							System.out.println("successor2 helped me :)");
-							callAgain = false;
 						} catch (IOException ex) {
 							System.out
 									.println("stabilize()-within catch - socket failed");
@@ -232,9 +239,9 @@ public class RingStabilizer extends Thread {
 						socketReader.close();
 						socket.close();
 						updateSuccessors();
-						manageReplica();
+//						 manageReplica();
 
-						
+						callAgain = false;
 					}
 
 				}
@@ -250,7 +257,13 @@ public class RingStabilizer extends Thread {
 			e.printStackTrace();
 
 		}
-		
+		// } catch (UnknownHostException e) {
+		// System.err.println("stabilize() could not find host of first successor");
+		// e.printStackTrace();
+		// } catch (IOException e) {
+		// System.err.println("stabilize() could not connect to first successor");
+		// e.printStackTrace();
+		// }
 	}
 
 	// This method is for finger Table updation
@@ -275,14 +288,14 @@ public class RingStabilizer extends Thread {
 
 				// Read response from chord
 				String serverResponse = socketReader.readLine();
-				System.out.println(serverResponse);
-				if (serverResponse!=null && !serverResponse.isEmpty() && !serverResponse.equalsIgnoreCase("Not found.")) {
+
+				if (serverResponse!=null && !serverResponse.isEmpty()) {
 					// Parse out address and port
 					String[] serverResponseFragments = serverResponse.split(
 							":", 2);
 					String[] addressFragments = serverResponseFragments[1]
 							.split(":");
-					if (addressFragments != null && addressFragments.length == 2) {
+					//				if (addressFragments != null && addressFragments.length == 2) {
 					// Add response to finger table
 					currentNode.getFingerTable().put(
 							i,
@@ -294,7 +307,7 @@ public class RingStabilizer extends Thread {
 				}
 
 					// System.out.println("Received: " + serverResponse);
-				}
+//				}
 
 			} catch (Exception e) {
 				System.err.println("Error from updateFingerTable(): "
@@ -311,11 +324,11 @@ public class RingStabilizer extends Thread {
 	}
 
 	// new logic to update successor2//by priya
-	private void updateSuccessors() throws UnknownHostException, IOException {
+	private void updateSuccessors() {
 		Socket socket = null;
 		PrintWriter socketWriter = null;
 		BufferedReader socketReader = null;
-		//try {
+		try {
 			currentNode.setSuccessor1(currentNode.getFingerTable().get(0));
 			// Open socket to successor
 			socket = new Socket(currentNode.getSuccessor1().getAddress(),
@@ -354,10 +367,10 @@ public class RingStabilizer extends Thread {
 						+ currentNode.getSuccessor2().getPort());
 			}
 			currentNode.unlock();
-		/*} catch (Exception ex) {
+		} catch (Exception ex) {
 			System.err.println("Error from updateSuccessors():"
 					+ ex.getMessage());
-		}*/
+		}
 //		// Close connections
 //		if (socketWriter != null)
 //			socketWriter.close();
@@ -467,9 +480,8 @@ public class RingStabilizer extends Thread {
 			// Read response from chord
 			// String serverResponse = socketReader.readLine();
 		} catch (Exception ex) {
-			
 			System.err.println("Error from connectToSuccessors():"
-					+ ex.getMessage()+" when connecting to "+port);
+					+ ex.getMessage());
 		}
 
 		try {
@@ -485,7 +497,7 @@ public class RingStabilizer extends Thread {
 		}
 
 		// check response
-		//System.out.println("replicate data to " + address + "-" + port);
+		System.out.println("replicate data to " + address + "-" + port);
 		// System.out.println("replicate data to "+address+"-"+port+": "+serverResponse);
 
 	}

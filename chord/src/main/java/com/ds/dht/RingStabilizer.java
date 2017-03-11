@@ -160,7 +160,7 @@ public class RingStabilizer extends Thread {
 
 						// manage replicas///code by priya
 						// replicate data to successors
-						 manageReplica();
+//						 manageReplica();
 
 					}
 					// else If I dont have successor entries and if I am not my
@@ -190,7 +190,7 @@ public class RingStabilizer extends Thread {
 
 						// manage replicas///code by priya
 						// replicate data to successors
-						 manageReplica();
+//						 manageReplica();
 
 					}
 				} catch (UnknownHostException e) {
@@ -239,7 +239,7 @@ public class RingStabilizer extends Thread {
 						socketReader.close();
 						socket.close();
 						updateSuccessors();
-						 manageReplica();
+//						 manageReplica();
 
 						callAgain = false;
 					}
@@ -289,11 +289,13 @@ public class RingStabilizer extends Thread {
 				// Read response from chord
 				String serverResponse = socketReader.readLine();
 
-				// Parse out address and port
-				String[] serverResponseFragments = serverResponse.split(":", 2);
-				String[] addressFragments = serverResponseFragments[1]
-						.split(":");
-//				if (addressFragments != null && addressFragments.length == 2) {
+				if (serverResponse!=null && !serverResponse.isEmpty()) {
+					// Parse out address and port
+					String[] serverResponseFragments = serverResponse.split(
+							":", 2);
+					String[] addressFragments = serverResponseFragments[1]
+							.split(":");
+					//				if (addressFragments != null && addressFragments.length == 2) {
 					// Add response to finger table
 					currentNode.getFingerTable().put(
 							i,
@@ -302,6 +304,7 @@ public class RingStabilizer extends Thread {
 					currentNode.setSuccessor1(currentNode.getFingerTable().get(
 							0));
 					// currentNode.setSuccessor2(currentNode.getFingerTable().get(1));
+				}
 
 					// System.out.println("Received: " + serverResponse);
 //				}
@@ -350,17 +353,19 @@ public class RingStabilizer extends Thread {
 
 			// Read response from chord
 			String serverResponse = socketReader.readLine();
-			// Parse out address and port
-			String[] serverResponseFragments = serverResponse.split(":", 2);
-			String[] addressFragments = serverResponseFragments[1].split(":");
-			Finger newSuccessor2 = new Finger(addressFragments[0],
-					Integer.valueOf(addressFragments[1]));
-			currentNode.setSuccessor2(newSuccessor2);
-			System.out.println("On entry:successor1="
-					+ currentNode.getSuccessor1().getPort()
-					+ " successor2 set to "
-					+ currentNode.getSuccessor2().getPort());
-
+			if (serverResponse!=null && !serverResponse.isEmpty()) {
+				// Parse out address and port
+				String[] serverResponseFragments = serverResponse.split(":", 2);
+				String[] addressFragments = serverResponseFragments[1]
+						.split(":");
+				Finger newSuccessor2 = new Finger(addressFragments[0],
+						Integer.valueOf(addressFragments[1]));
+				currentNode.setSuccessor2(newSuccessor2);
+				System.out.println("On entry:successor1="
+						+ currentNode.getSuccessor1().getPort()
+						+ " successor2 set to "
+						+ currentNode.getSuccessor2().getPort());
+			}
 			currentNode.unlock();
 		} catch (Exception ex) {
 			System.err.println("Error from updateSuccessors():"

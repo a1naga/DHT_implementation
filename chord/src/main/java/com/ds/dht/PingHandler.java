@@ -93,14 +93,18 @@ public class PingHandler implements Runnable {
 						.put(0, currentNode.getSuccessor2());
 				currentNode.unlock();
 				// Close connections
-				if (socketWriter != null)
-					socketWriter.close();
+//				if (socketWriter != null)
+//					socketWriter.close();
 				try {
 
-					if (socketReader != null)
-						socketReader.close();
-					if (socket != null)
-						socket.close();
+//					if (socketReader != null)
+//						socketReader.close();
+//					if (socket != null)
+//						socket.close();
+					// Close connections
+					socketWriter.close();
+					socketReader.close();
+					socket.close();
 				} catch (IOException e1) {
 					// TODO Auto-generated catch block
 					e1.printStackTrace();

@@ -8,6 +8,7 @@ import java.math.BigInteger;
 import java.net.ConnectException;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.util.Iterator;
 import java.util.Map;
 
 /**
@@ -381,8 +382,11 @@ public class RingStabilizer extends Thread {
 
 		// loop through data map entries of this node
 
-		for (Map.Entry<String, String> entry : currentNode.getDataStore()
-				.entrySet()) {
+		//for (Map.Entry<String, String> entry : currentNode.getDataStore()
+		//		.entrySet()) {
+		for (Iterator<Map.Entry<String, String>> it = currentNode
+				.getDataStore().entrySet().iterator(); it.hasNext();) {
+			Map.Entry<String, String> entry = it.next();
 			try {
 				String dataKey = entry.getKey();
 				String dataValue = entry.getValue();
@@ -419,11 +423,92 @@ public class RingStabilizer extends Thread {
 							currentNode.getSuccessor2().getPort(), dataKey,
 							dataValue);
 				}
+				else{
+					//these are replicas -- should i keep?
+					//find the owner and check its successor1 and 2
+					//if currentnode not a successor, delete dataKey from current node's data store
+					if(globalMaintainence(keyNodeId))
+					{
+						currentNode.lock();
+						it.remove();
+						currentNode.unlock();
+					}
+					
+				}
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
 		}
 
+	}
+	
+	private boolean globalMaintainence(long keyNodeId)
+	{
+		boolean canDelete=false;
+		Socket socket = null;
+		PrintWriter socketWriter = null;
+		BufferedReader socketReader = null;
+		try{
+		
+			socket = new Socket(currentNode.getSuccessor1().getAddress(), currentNode.getSuccessor1().getPort());
+			// Open reader/writer to chord node
+			socketWriter = new PrintWriter(socket.getOutputStream(), true);
+			socketReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+			// Send query to chord
+			socketWriter.println(DHTMain.FIND_NODE + ":"+ keyNodeId);
+		
+			// Read response from chord
+			String address=null;int port=0;
+			String serverResponse = socketReader.readLine();
+			System.out.println(serverResponse);
+			if (serverResponse!=null && !serverResponse.isEmpty() && !serverResponse.equalsIgnoreCase("Not found.")) {
+				// Parse out address and port
+				String[] serverResponseFragments = serverResponse.split(
+						":", 2);
+				String[] addressFragments = serverResponseFragments[1]
+						.split(":");
+				address=addressFragments[0];
+				port=Integer.parseInt(addressFragments[1]);
+			}
+			// Close connections
+			socketWriter.close();
+			socketReader.close();
+			socket.close();
+			
+			if(address!=null && port!=0){
+				// Open socket to chord node
+				socket = new Socket(address,port);
+
+				// Open reader/writer to chord node
+				socketWriter = new PrintWriter(
+						socket.getOutputStream(), true);
+				socketReader = new BufferedReader(
+						new InputStreamReader(socket.getInputStream()));
+				//get the successor1 and 2 of this node, if current node is not a successor, delete value from current node
+				socketWriter.println(DHTMain.GET_SUCCESSORS + ":"+ port);
+				
+				String response = socketReader.readLine();
+				if(response!=null && !response.isEmpty())
+				{
+					String[] responseFragments=response.split(":");
+					String successor1NodeId=responseFragments[0];
+					String successor2NodeId=responseFragments[1];
+					if(!String.valueOf(currentNode.getNodeId()).equals(successor1NodeId) && !String.valueOf(currentNode.getNodeId()).equals(successor2NodeId))
+					{
+						canDelete=true;
+					}
+				}
+				// Close connections
+				socketWriter.close();
+				socketReader.close();
+				socket.close();
+			}
+				
+		}
+		catch(Exception e) {
+			e.printStackTrace();
+		}
+		return canDelete;
 	}
 
 	// copied it for use in manageReplica

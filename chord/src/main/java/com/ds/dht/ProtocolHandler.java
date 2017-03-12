@@ -183,6 +183,12 @@ public class ProtocolHandler implements Runnable {
 					leaderElected(electionInitiator, ipAddress, port);
 					break;
 				}
+				case DHTMain.GET_SUCCESSORS:{
+					String response=currentNode.getSuccessor1().getNodeId()+":"+currentNode.getSuccessor2().getNodeId();
+					socketWriter.println(response);
+
+					break;
+				}
 				}
 			}
 
@@ -611,6 +617,7 @@ public class ProtocolHandler implements Runnable {
 					currentNode.lock();
 					it.remove();
 					currentNode.unlock();
+					
 				} else if ((newNodeId > currentNode.getNodeId())
 						&& (hashedKeyEntry > currentNode.getNodeId() && hashedKeyEntry < newNodeId)) {
 					sbResponse.append(strKey + ":" + entry.getValue());
@@ -619,6 +626,7 @@ public class ProtocolHandler implements Runnable {
 					currentNode.lock();
 					it.remove();
 					currentNode.unlock();
+					
 				}
 			}
 
@@ -632,7 +640,7 @@ public class ProtocolHandler implements Runnable {
 		return response;
 
 	}
-
+	
 	private String getValueInSuccessor(String key) {
 		String response = null;
 		try {

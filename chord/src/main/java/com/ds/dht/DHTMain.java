@@ -16,18 +16,23 @@ public class DHTMain {
 	public final static String FIND_LEADER = "FIND_LEADER";
 	public final static String ELECT_LEADER = "ELECT_LEADER";
 	public final static String LEADER_ELECTED = "LEADER_ELECTED";
+	public final static String GET_SUCCESSORS="GET_SUCCESSORS";
 	
 	public final static long RING_SIZE = 65536;
 	public final static int FINGER_TABLE_SIZE = 16;
 
 	public static void main(String[] args) {
 		// Check arguments
+		//if (args.length == 2) {
 		if (args.length == 1) {
 			// Create new node
 			new Node("127.0.0.1", args[0]);
+			//new Node(args[0],args[1]);
+		//} else if (args.length == 4) {
 		} else if (args.length == 3) {
 			// Create new node
 			new Node("127.0.0.1", args[0], args[1], args[2]);
+			//new Node(args[0], args[1], args[2],args[3]);
 		} else {
 			System.err.println("Usage: DHTMain [port] || DHTMain [port] [bootStrapNodeAddress] [bootStrapNodePort]");
 			System.exit(1);

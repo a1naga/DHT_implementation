@@ -50,15 +50,14 @@ public class Node {
 		this.nodeIpAddress = address;
 		this.port = Integer.valueOf(port);
 		this.setLeader(true);
-		this.setElectionMessage("ELECTED");
+		this.setElectionMessage(DHTMain.LEADER_ELECTED);
 		System.out.println("Creating a new Chord ring");
 		initialize(isLeader());
 		// printKeyValueMap();
 	}
 
 	/**
-	 * Constructor for creating a new Chord node that will join an existing
-	 * ring.
+	 * Constructor for creating a new Node that will join an existing ring.
 	 *
 	 * @param address
 	 *            The address of this node
@@ -78,9 +77,10 @@ public class Node {
 		// Set contact node fields
 		this.bootStrapNodeAddress = bootStrapNodeAddress;
 		this.bootStrapNodePort = Integer.valueOf(bootStrapNodePort);
+
 		System.out.println("Connecting to existing node " + this.bootStrapNodeAddress + ":" + this.bootStrapNodePort);
 		this.setLeader(false);
-		this.setElectionMessage("ELECTED");
+		this.setElectionMessage(DHTMain.LEADER_ELECTED);
 		initialize(isLeader());
 		// printKeyValueMap();
 
@@ -395,6 +395,32 @@ public class Node {
 		this.dataStore = dataStore;
 	}
 
+	public void initiateLeaderElection(String ipAddress, int port) {
+		if (!this.getElectionMessage().equals(DHTMain.ELECT_LEADER)) {
+			try {
+				// Open socket to predecessor
+				Socket socket = new Socket(ipAddress, port);
+
+				// Open reader/writer to chord node
+				PrintWriter socketWriter = new PrintWriter(socket.getOutputStream(), true);
+				BufferedReader socketReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+
+				// Send a ping
+				socketWriter.println(DHTMain.ELECT_LEADER + ":" + this.getNodeId());
+				// Close connections
+				socketWriter.close();
+				socketReader.close();
+				socket.close();
+				this.setElectionMessage(DHTMain.ELECT_LEADER);
+			} catch (IOException e) {
+				System.out.println("Exception occurred in electionInitiator: " + e.getMessage());
+			} catch (Exception ex) {
+				System.out.println("Exception occurred in electionInitiator: " + ex.getMessage());
+			}
+		}
+
+	}
+
 	public void printFingerTableEntries() {
 		System.out.println("-------------------- Finger Table Entries -------------------");
 
@@ -412,7 +438,8 @@ public class Node {
 		}
 		System.out.println("Node: " + this.getNodeId() + ", Successor1: " + getSuccessor1().getNodeId()
 				+ ", Predecessor1: " + getPredecessor1().getNodeId() + ", Successor2: " + getSuccessor2().getNodeId()
-				+ ", Predecessor2: " + getPredecessor2().getNodeId() + ", leaderId: " + leaderId);
+				+ ", Predecessor2: " + getPredecessor2().getNodeId() + ", leaderId: " + leaderId
+				+ ", electionMessage : " + electionMessage);
 		System.out.println("-------------------- Finger Table Entries -------------------");
 	}
 

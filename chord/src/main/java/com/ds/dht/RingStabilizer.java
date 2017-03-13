@@ -43,10 +43,8 @@ public class RingStabilizer extends Thread {
 				try {
 					// Only open a connection to the successor if it is not
 					// ourselves
-					if (!currentNode.getNodeIpAddress().equals(
-							currentNode.getSuccessor1().getAddress())
-							|| (currentNode.getPort() != currentNode
-									.getSuccessor1().getPort())) {
+					if (!currentNode.getNodeIpAddress().equals(currentNode.getSuccessor1().getAddress())
+							|| (currentNode.getPort() != currentNode.getSuccessor1().getPort())) {
 						System.out.println("StabilizeProtocol will run now.");
 
 						// for multiple nodes, successor1 and successor2 cannot
@@ -55,36 +53,30 @@ public class RingStabilizer extends Thread {
 											// updation
 
 						// Open socket to successor
-						socket = new Socket(currentNode.getSuccessor1()
-								.getAddress(), currentNode.getSuccessor1()
-								.getPort());
+						socket = new Socket(currentNode.getSuccessor1().getAddress(),
+								currentNode.getSuccessor1().getPort());
 
 						// Open reader/writer to chord node
-						socketWriter = new PrintWriter(
-								socket.getOutputStream(), true);
-						socketReader = new BufferedReader(
-								new InputStreamReader(socket.getInputStream()));
+						socketWriter = new PrintWriter(socket.getOutputStream(), true);
+						socketReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 
 						// Submit a request for the predecessor
-						socketWriter.println(DHTMain.REQUEST_PREDECESSOR + ":"
-								+ currentNode.getNodeId() + " asking "
+						socketWriter.println(DHTMain.REQUEST_PREDECESSOR + ":" + currentNode.getNodeId() + " asking "
 								+ currentNode.getSuccessor1().getNodeId());
-						// System.out.println("Sent: " +
-						// DHTMain.REQUEST_PREDECESSOR + ":" +
-						// currentNode.getNodeId()
-						// + " asking " +
-						// currentNode.getSuccessor1().getNodeId());
+								// System.out.println("Sent: " +
+								// DHTMain.REQUEST_PREDECESSOR + ":" +
+								// currentNode.getNodeId()
+								// + " asking " +
+								// currentNode.getSuccessor1().getNodeId());
 
 						// Read response from chord
 						String serverResponse = socketReader.readLine();
 						// System.out.println("Received: " + serverResponse);
 
 						// Parse server response for address and port
-						String[] predecessorFragments = serverResponse
-								.split(":");
+						String[] predecessorFragments = serverResponse.split(":");
 						String predecessorAddress = predecessorFragments[0];
-						int predecessorPort = Integer
-								.valueOf(predecessorFragments[1]);
+						int predecessorPort = Integer.valueOf(predecessorFragments[1]);
 						// If the address:port that was returned from the
 						// server
 						// response is
@@ -93,22 +85,17 @@ public class RingStabilizer extends Thread {
 						// predecessor
 						// for my
 						// Successor, if not update my finger table)
-						if (!currentNode.getNodeIpAddress().equals(
-								predecessorAddress)
+						if (!currentNode.getNodeIpAddress().equals(predecessorAddress)
 								|| (currentNode.getPort() != predecessorPort)) {
 							currentNode.lock();
-
-							Finger newSuccessor = new Finger(
-									predecessorAddress, predecessorPort);
+							Finger newSuccessor = new Finger(predecessorAddress, predecessorPort);
 
 							// Update finger table entries to reflect new
 							// successor
-							currentNode.getFingerTable().put(1,
-									currentNode.getFingerTable().get(0));
+							currentNode.getFingerTable().put(1, currentNode.getFingerTable().get(0));
 							currentNode.getFingerTable().put(0, newSuccessor);
 
 							currentNode.unlock();
-
 							// Close connections
 							socketWriter.close();
 							socketReader.close();
@@ -118,28 +105,26 @@ public class RingStabilizer extends Thread {
 							// successor
 							updateSuccessors();// by priya
 
+							// If the new node entered has a Higher nodeId than
+							// the current LeaderId then start LeaderElection
+							System.out.println("Checking if new successor id (" + newSuccessor.getNodeId() + ") > current leader id " + currentNode.getLeaderId());
+							startLeaderElectionIfRequired(newSuccessor);
+
 							// Inform new successor that I am your
 							// predecessor
 							// now
-							socket = new Socket(newSuccessor.getAddress(),
-									newSuccessor.getPort());
+							socket = new Socket(newSuccessor.getAddress(), newSuccessor.getPort());
 
 							// Open writer/reader to new successor node
-							socketWriter = new PrintWriter(
-									socket.getOutputStream(), true);
-							socketReader = new BufferedReader(
-									new InputStreamReader(
-											socket.getInputStream()));
+							socketWriter = new PrintWriter(socket.getOutputStream(), true);
+							socketReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 
 							// Tell successor that this node is its new
 							// predecessor
-							socketWriter.println(DHTMain.NEW_PREDECESSOR + ":"
-									+ currentNode.getNodeIpAddress() + ":"
+							socketWriter.println(DHTMain.NEW_PREDECESSOR + ":" + currentNode.getNodeIpAddress() + ":"
 									+ currentNode.getPort());
-							System.out.println("Sent: "
-									+ DHTMain.NEW_PREDECESSOR + ":"
-									+ currentNode.getNodeIpAddress() + ":"
-									+ currentNode.getPort());
+							System.out.println("Sent: " + DHTMain.NEW_PREDECESSOR + ":" + currentNode.getNodeIpAddress()
+									+ ":" + currentNode.getPort());
 
 						}
 
@@ -154,26 +139,21 @@ public class RingStabilizer extends Thread {
 
 						// manage replicas///code by priya
 						// replicate data to successors
-						 manageReplica();
+						manageReplica();
 
 					}
 					// else If I dont have successor entries and if I am not my
 					// 1st predecessor
 					// then connect to my predecessor and update my finger table
-					else if (!currentNode.getNodeIpAddress().equals(
-							currentNode.getPredecessor1().getAddress())
-							|| (currentNode.getPort() != currentNode
-									.getPredecessor1().getPort())) {
+					else if (!currentNode.getNodeIpAddress().equals(currentNode.getPredecessor1().getAddress())
+							|| (currentNode.getPort() != currentNode.getPredecessor1().getPort())) {
 						// Open socket to successor
-						socket = new Socket(currentNode.getPredecessor1()
-								.getAddress(), currentNode.getPredecessor1()
-								.getPort());
+						socket = new Socket(currentNode.getPredecessor1().getAddress(),
+								currentNode.getPredecessor1().getPort());
 
 						// Open reader/writer to chord node
-						socketWriter = new PrintWriter(
-								socket.getOutputStream(), true);
-						socketReader = new BufferedReader(
-								new InputStreamReader(socket.getInputStream()));
+						socketWriter = new PrintWriter(socket.getOutputStream(), true);
+						socketReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 						fingerTableUpdate(socketWriter, socketReader);
 						// Close connections
 						socketWriter.close();
@@ -182,18 +162,20 @@ public class RingStabilizer extends Thread {
 						// update successor2 logic//by priya
 						updateSuccessors();
 
+						// Happens only in the first node case when a second
+						// node joined
+						startLeaderElectionIfRequired(currentNode.getSuccessor1());
+
 						// manage replicas///code by priya
 						// replicate data to successors
-						 manageReplica();
+						manageReplica();
 
 					}
 				} catch (UnknownHostException e) {
-					System.err
-							.println("stabilize() could not find host of first successor");
+					System.err.println("stabilize() could not find host of first successor");
 					e.printStackTrace();
 				} catch (IOException e) {// Handles successor node failure
-					System.err
-							.println("stabilize() could not connect to first successor");
+					System.err.println("stabilize() could not connect to first successor");
 					e.printStackTrace();
 					// which means something is wrong/////////////trying
 					// Successor1 connection did not work
@@ -202,41 +184,32 @@ public class RingStabilizer extends Thread {
 					while (callAgain) {
 						try {
 							// Open socket to successor2
-							socket = new Socket(currentNode.getSuccessor2()
-									.getAddress(), currentNode.getSuccessor2()
-									.getPort());
-							System.out
-									.println("ask help from successor2 to update finger table:"
-											+ currentNode.getSuccessor2()
-													.getPort());
+							socket = new Socket(currentNode.getSuccessor2().getAddress(),
+									currentNode.getSuccessor2().getPort());
+							System.out.println("ask help from successor2 to update finger table:"
+									+ currentNode.getSuccessor2().getPort());
 							// Open reader/writer to chord node
-							socketWriter = new PrintWriter(
-									socket.getOutputStream(), true);
-							socketReader = new BufferedReader(
-									new InputStreamReader(
-											socket.getInputStream()));
+							socketWriter = new PrintWriter(socket.getOutputStream(), true);
+							socketReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 							// update finger table
 							fingerTableUpdate(socketWriter, socketReader);
+							// Close connections
+							socketWriter.close();
+							socketReader.close();
+							socket.close();
+							updateSuccessors();
+							startLeaderElectionIfRequired(currentNode.getSuccessor1());
 							System.out.println("successor2 helped me :)");
 							callAgain = false;
 						} catch (IOException ex) {
-							System.out
-									.println("stabilize()-within catch - socket failed");
+							System.out.println("stabilize()-within catch - socket failed");
 							ex.printStackTrace();
 						} catch (Exception ex) {
-							System.out
-									.println("stabilize- within catch - sm excptn:"
-											+ ex.getMessage());
+							System.out.println("stabilize- within catch - sm excptn:" + ex.getMessage());
 							ex.printStackTrace();
 						}
-						// Close connections
-						socketWriter.close();
-						socketReader.close();
-						socket.close();
-						updateSuccessors();
 						manageReplica();
 
-						
 					}
 
 				}
@@ -247,21 +220,19 @@ public class RingStabilizer extends Thread {
 			System.err.println("stabilize() thread interrupted");
 			e.printStackTrace();
 		} catch (Exception e) {
-			System.err.println("stabilize() threw an exception :"
-					+ e.getMessage());
+			System.err.println("stabilize() threw an exception :" + e.getMessage());
 			e.printStackTrace();
 
 		}
-		
+
 	}
 
 	// This method is for finger Table updation
-	private void fingerTableUpdate(PrintWriter socketWriter,
-			BufferedReader socketReader) throws IOException {
+	private void fingerTableUpdate(PrintWriter socketWriter, BufferedReader socketReader) throws IOException {
 		BigInteger bigQuery = BigInteger.valueOf(2L);
 		BigInteger bigSelfId = BigInteger.valueOf(currentNode.getNodeId());
 
-		currentNode.lock();
+		
 
 		// Update all fingers
 		for (int i = 0; i < DHTMain.FINGER_TABLE_SIZE; i++) {
@@ -270,45 +241,40 @@ public class RingStabilizer extends Thread {
 				bigResult = bigResult.add(bigSelfId);
 
 				// Send query to chord
-				socketWriter.println(DHTMain.FIND_NODE + ":"
-						+ bigResult.longValue());
+				socketWriter.println(DHTMain.FIND_NODE + ":" + bigResult.longValue());
 				// System.out.println("Sent: " + DHTMain.FIND_NODE + ":" +
 				// bigResult.longValue());
 
 				// Read response from chord
 				String serverResponse = socketReader.readLine();
 				System.out.println(serverResponse);
-				if (serverResponse!=null && !serverResponse.isEmpty() && !serverResponse.equalsIgnoreCase("Not found.")) {
+				if (serverResponse != null && !serverResponse.isEmpty()
+						&& !serverResponse.equalsIgnoreCase("Not found.")) {
 					// Parse out address and port
-					String[] serverResponseFragments = serverResponse.split(
-							":", 2);
-					String[] addressFragments = serverResponseFragments[1]
-							.split(":");
+					String[] serverResponseFragments = serverResponse.split(":", 2);
+					String[] addressFragments = serverResponseFragments[1].split(":");
 					if (addressFragments != null && addressFragments.length == 2) {
-					// Add response to finger table
-					currentNode.getFingerTable().put(
-							i,
-							new Finger(addressFragments[0], Integer
-									.valueOf(addressFragments[1])));
-					currentNode.setSuccessor1(currentNode.getFingerTable().get(
-							0));
-					// currentNode.setSuccessor2(currentNode.getFingerTable().get(1));
-				}
+						currentNode.lock();
+						// Add response to finger table
+						currentNode.getFingerTable().put(i,
+								new Finger(addressFragments[0], Integer.valueOf(addressFragments[1])));
+						currentNode.setSuccessor1(currentNode.getFingerTable().get(0));
+						// currentNode.setSuccessor2(currentNode.getFingerTable().get(1));
+						currentNode.unlock();
+					}
 
 					// System.out.println("Received: " + serverResponse);
 				}
 
 			} catch (Exception e) {
-				System.err.println("Error from updateFingerTable(): "
-						+ e.getMessage());
+				System.err.println("Error from updateFingerTable(): " + e.getMessage());
 				e.printStackTrace();
 			}
 		}
-		currentNode.unlock();
+		
 		currentNode.printFingerTableEntries();
 
-		System.out.println("printing data in RingStabilizer "
-				+ currentNode.getDataStore());
+		System.out.println("printing data in RingStabilizer " + currentNode.getDataStore());
 
 	}
 
@@ -317,60 +283,54 @@ public class RingStabilizer extends Thread {
 		Socket socket = null;
 		PrintWriter socketWriter = null;
 		BufferedReader socketReader = null;
-		//try {
-			currentNode.setSuccessor1(currentNode.getFingerTable().get(0));
-			// Open socket to successor
-			socket = new Socket(currentNode.getSuccessor1().getAddress(),
-					currentNode.getSuccessor1().getPort());
+		// try {
+		currentNode.setSuccessor1(currentNode.getFingerTable().get(0));
+		// Open socket to successor
+		socket = new Socket(currentNode.getSuccessor1().getAddress(), currentNode.getSuccessor1().getPort());
 
-			// Open reader/writer to chord node
-			socketWriter = new PrintWriter(socket.getOutputStream(), true);
-			socketReader = new BufferedReader(new InputStreamReader(
-					socket.getInputStream()));
+		// Open reader/writer to chord node
+		socketWriter = new PrintWriter(socket.getOutputStream(), true);
+		socketReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 
-			// socket to successor1 and get its successor1 entry
-			BigInteger bigQuery = BigInteger.valueOf(2L);
-			BigInteger bigSelfId = BigInteger.valueOf(currentNode
-					.getSuccessor1().getNodeId());
-			BigInteger bigResult = bigQuery.pow(0);
-			bigResult = bigResult.add(bigSelfId);
+		// socket to successor1 and get its successor1 entry
+		BigInteger bigQuery = BigInteger.valueOf(2L);
+		BigInteger bigSelfId = BigInteger.valueOf(currentNode.getSuccessor1().getNodeId());
+		BigInteger bigResult = bigQuery.pow(0);
+		bigResult = bigResult.add(bigSelfId);
 
+		
+		// Send query to chord
+		socketWriter.println(DHTMain.FIND_NODE + ":" + bigResult.longValue());
+
+		// Read response from chord
+		String serverResponse = socketReader.readLine();
+		if (serverResponse != null && !serverResponse.isEmpty()) {
+			// Parse out address and port
+			String[] serverResponseFragments = serverResponse.split(":", 2);
+			String[] addressFragments = serverResponseFragments[1].split(":");
 			currentNode.lock();
-			// Send query to chord
-			socketWriter.println(DHTMain.FIND_NODE + ":"
-					+ bigResult.longValue());
-
-			// Read response from chord
-			String serverResponse = socketReader.readLine();
-			if (serverResponse!=null && !serverResponse.isEmpty()) {
-				// Parse out address and port
-				String[] serverResponseFragments = serverResponse.split(":", 2);
-				String[] addressFragments = serverResponseFragments[1]
-						.split(":");
-				Finger newSuccessor2 = new Finger(addressFragments[0],
-						Integer.valueOf(addressFragments[1]));
-				currentNode.setSuccessor2(newSuccessor2);
-				System.out.println("On entry:successor1="
-						+ currentNode.getSuccessor1().getPort()
-						+ " successor2 set to "
-						+ currentNode.getSuccessor2().getPort());
-			}
+			Finger newSuccessor2 = new Finger(addressFragments[0], Integer.valueOf(addressFragments[1]));
+			currentNode.setSuccessor2(newSuccessor2);
 			currentNode.unlock();
-		/*} catch (Exception ex) {
-			System.err.println("Error from updateSuccessors():"
-					+ ex.getMessage());
-		}*/
-//		// Close connections
-//		if (socketWriter != null)
-//			socketWriter.close();
+			System.out.println("On entry:successor1=" + currentNode.getSuccessor1().getPort() + " successor2 set to "
+					+ currentNode.getSuccessor2().getPort());
+		}
+		
+		/*
+		 * } catch (Exception ex) { System.err.println(
+		 * "Error from updateSuccessors():" + ex.getMessage()); }
+		 */
+		// // Close connections
+		// if (socketWriter != null)
+		// socketWriter.close();
 		try {
 			// Close connections
-//			if (socketWriter != null)
-				socketWriter.close();
-//			if (socketReader != null)
-				socketReader.close();
-//			if (socket != null)
-				socket.close();
+			// if (socketWriter != null)
+			socketWriter.close();
+			// if (socketReader != null)
+			socketReader.close();
+			// if (socket != null)
+			socket.close();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -382,10 +342,9 @@ public class RingStabilizer extends Thread {
 
 		// loop through data map entries of this node
 
-		//for (Map.Entry<String, String> entry : currentNode.getDataStore()
-		//		.entrySet()) {
-		for (Iterator<Map.Entry<String, String>> it = currentNode
-				.getDataStore().entrySet().iterator(); it.hasNext();) {
+		// for (Map.Entry<String, String> entry : currentNode.getDataStore()
+		// .entrySet()) {
+		for (Iterator<Map.Entry<String, String>> it = currentNode.getDataStore().entrySet().iterator(); it.hasNext();) {
 			Map.Entry<String, String> entry = it.next();
 			try {
 				String dataKey = entry.getKey();
@@ -414,26 +373,21 @@ public class RingStabilizer extends Thread {
 					// close socket
 					// check response
 
-					connectToSuccessor(
-							currentNode.getSuccessor1().getAddress(),
-							currentNode.getSuccessor1().getPort(), dataKey,
-							dataValue);
-					connectToSuccessor(
-							currentNode.getSuccessor2().getAddress(),
-							currentNode.getSuccessor2().getPort(), dataKey,
-							dataValue);
-				}
-				else{
-					//these are replicas -- should i keep?
-					//find the owner and check its successor1 and 2
-					//if currentnode not a successor, delete dataKey from current node's data store
-					if(globalMaintainence(keyNodeId))
-					{
+					connectToSuccessor(currentNode.getSuccessor1().getAddress(), currentNode.getSuccessor1().getPort(),
+							dataKey, dataValue);
+					connectToSuccessor(currentNode.getSuccessor2().getAddress(), currentNode.getSuccessor2().getPort(),
+							dataKey, dataValue);
+				} else {
+					// these are replicas -- should i keep?
+					// find the owner and check its successor1 and 2
+					// if currentnode not a successor, delete dataKey from
+					// current node's data store
+					if (globalMaintainence(keyNodeId)) {
 						currentNode.lock();
 						it.remove();
 						currentNode.unlock();
 					}
-					
+
 				}
 			} catch (Exception e) {
 				e.printStackTrace();
@@ -441,61 +395,57 @@ public class RingStabilizer extends Thread {
 		}
 
 	}
-	
-	private boolean globalMaintainence(long keyNodeId)
-	{
-		boolean canDelete=false;
+
+	private boolean globalMaintainence(long keyNodeId) {
+		boolean canDelete = false;
 		Socket socket = null;
 		PrintWriter socketWriter = null;
 		BufferedReader socketReader = null;
-		try{
-		
+		try {
+
 			socket = new Socket(currentNode.getSuccessor1().getAddress(), currentNode.getSuccessor1().getPort());
 			// Open reader/writer to chord node
 			socketWriter = new PrintWriter(socket.getOutputStream(), true);
 			socketReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 			// Send query to chord
-			socketWriter.println(DHTMain.FIND_NODE + ":"+ keyNodeId);
-		
+			socketWriter.println(DHTMain.FIND_NODE + ":" + keyNodeId);
+
 			// Read response from chord
-			String address=null;int port=0;
+			String address = null;
+			int port = 0;
 			String serverResponse = socketReader.readLine();
 			System.out.println(serverResponse);
-			if (serverResponse!=null && !serverResponse.isEmpty() && !serverResponse.equalsIgnoreCase("Not found.")) {
+			if (serverResponse != null && !serverResponse.isEmpty() && !serverResponse.equalsIgnoreCase("Not found.")) {
 				// Parse out address and port
-				String[] serverResponseFragments = serverResponse.split(
-						":", 2);
-				String[] addressFragments = serverResponseFragments[1]
-						.split(":");
-				address=addressFragments[0];
-				port=Integer.parseInt(addressFragments[1]);
+				String[] serverResponseFragments = serverResponse.split(":", 2);
+				String[] addressFragments = serverResponseFragments[1].split(":");
+				address = addressFragments[0];
+				port = Integer.parseInt(addressFragments[1]);
 			}
 			// Close connections
 			socketWriter.close();
 			socketReader.close();
 			socket.close();
-			
-			if(address!=null && port!=0){
+
+			if (address != null && port != 0) {
 				// Open socket to chord node
-				socket = new Socket(address,port);
+				socket = new Socket(address, port);
 
 				// Open reader/writer to chord node
-				socketWriter = new PrintWriter(
-						socket.getOutputStream(), true);
-				socketReader = new BufferedReader(
-						new InputStreamReader(socket.getInputStream()));
-				//get the successor1 and 2 of this node, if current node is not a successor, delete value from current node
-				socketWriter.println(DHTMain.GET_SUCCESSORS + ":"+ port);
-				
+				socketWriter = new PrintWriter(socket.getOutputStream(), true);
+				socketReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+				// get the successor1 and 2 of this node, if current node is not
+				// a successor, delete value from current node
+				socketWriter.println(DHTMain.GET_SUCCESSORS + ":" + port);
+
 				String response = socketReader.readLine();
-				if(response!=null && !response.isEmpty())
-				{
-					String[] responseFragments=response.split(":");
-					String successor1NodeId=responseFragments[0];
-					String successor2NodeId=responseFragments[1];
-					if(!String.valueOf(currentNode.getNodeId()).equals(successor1NodeId) && !String.valueOf(currentNode.getNodeId()).equals(successor2NodeId))
-					{
-						canDelete=true;
+				if (response != null && !response.isEmpty()) {
+					String[] responseFragments = response.split(":");
+					String successor1NodeId = responseFragments[0];
+					String successor2NodeId = responseFragments[1];
+					if (!String.valueOf(currentNode.getNodeId()).equals(successor1NodeId)
+							&& !String.valueOf(currentNode.getNodeId()).equals(successor2NodeId)) {
+						canDelete = true;
 					}
 				}
 				// Close connections
@@ -503,9 +453,8 @@ public class RingStabilizer extends Thread {
 				socketReader.close();
 				socket.close();
 			}
-				
-		}
-		catch(Exception e) {
+
+		} catch (Exception e) {
 			e.printStackTrace();
 		}
 		return canDelete;
@@ -519,13 +468,11 @@ public class RingStabilizer extends Thread {
 		if (currentNode.getNodeId() > currentNode.getPredecessor1().getNodeId()) {
 			// If the queryNodeId is between my predecessor and me, the query
 			// belongs to me
-			if ((queryNodeId > currentNode.getPredecessor1().getNodeId())
-					&& (queryNodeId <= currentNode.getNodeId())) {
+			if ((queryNodeId > currentNode.getPredecessor1().getNodeId()) && (queryNodeId <= currentNode.getNodeId())) {
 				response = true;
 			}
 		} else { // If we are wrapping
-			if ((queryNodeId > currentNode.getPredecessor1().getNodeId())
-					|| (queryNodeId <= currentNode.getNodeId())) {
+			if ((queryNodeId > currentNode.getPredecessor1().getNodeId()) || (queryNodeId <= currentNode.getNodeId())) {
 				response = true;
 			}
 		}
@@ -534,8 +481,7 @@ public class RingStabilizer extends Thread {
 	}
 
 	// socket to given node and put replica//by priya
-	private void connectToSuccessor(String address, int port, String key,
-			String value) {
+	private void connectToSuccessor(String address, int port, String key, String value) {
 		Socket socket = null;
 		PrintWriter socketWriter = null;
 		// BufferedReader socketReader = null;
@@ -548,32 +494,37 @@ public class RingStabilizer extends Thread {
 			// socketReader = new BufferedReader(new
 			// InputStreamReader(socket.getInputStream()));
 			// submit a request to copy dataKey,dataValue to successor's datamap
-			socketWriter.println(DHTMain.PUT_REPLICA + ":" + address + ":"
-					+ port + ":" + key + ":" + value);
+			socketWriter.println(DHTMain.PUT_REPLICA + ":" + address + ":" + port + ":" + key + ":" + value);
 			// Read response from chord
 			// String serverResponse = socketReader.readLine();
 		} catch (Exception ex) {
-			
-			System.err.println("Error from connectToSuccessors():"
-					+ ex.getMessage()+" when connecting to "+port);
+
+			System.err.println("Error from connectToSuccessors():" + ex.getMessage() + " when connecting to " + port);
 		}
 
 		try {
 			// Close connections
-//			if (socketWriter != null)
-				socketWriter.close();
+			// if (socketWriter != null)
+			socketWriter.close();
 			// if (socketReader != null)
 			// socketReader.close();
-//			if (socket != null)
-				socket.close();
+			// if (socket != null)
+			socket.close();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 
 		// check response
-		//System.out.println("replicate data to " + address + "-" + port);
-		// System.out.println("replicate data to "+address+"-"+port+": "+serverResponse);
+		// System.out.println("replicate data to " + address + "-" + port);
+		// System.out.println("replicate data to "+address+"-"+port+":
+		// "+serverResponse);
 
+	}
+
+	private void startLeaderElectionIfRequired(Finger newSuccessor) {
+		if (currentNode.getLeaderId() < newSuccessor.getNodeId()) {
+			currentNode.initiateLeaderElection(newSuccessor.getAddress(), newSuccessor.getPort());
+		}
 	}
 
 }
